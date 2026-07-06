@@ -1,21 +1,9 @@
 import { apiError, apiSuccess } from "@/lib/http/api-response";
-import { env } from "@/config/env";
 import { zapiWebhookDto } from "@/server/dtos/conversation/webhook-dto";
 import { ZapiWebhookService } from "@/server/services/zapi-webhook-service";
 
 export async function POST(request: Request) {
   try {
-    const url = new URL(request.url);
-
-    if (env.ZAPI_WEBHOOK_SECRET) {
-      const incomingSecret = request.headers.get("x-webhook-secret");
-      const querySecret = url.searchParams.get("secret");
-
-      if (incomingSecret !== env.ZAPI_WEBHOOK_SECRET && querySecret !== env.ZAPI_WEBHOOK_SECRET) {
-        return apiError("Webhook nao autorizado.", 401);
-      }
-    }
-
     const body = await request.json();
     const input = zapiWebhookDto.parse({
       phone: body.phone ?? body.from,
