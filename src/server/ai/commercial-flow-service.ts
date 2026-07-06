@@ -127,6 +127,12 @@ function parseEmail(message: string) {
   return match?.[0] ?? null;
 }
 
+function isGreeting(message: string) {
+  const normalized = normalizeText(message);
+
+  return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)\b/.test(normalized);
+}
+
 function formatModalityLabel(modality: Modality) {
   if (modality === Modality.EAD) {
     return "EAD 100% Online";
@@ -137,6 +143,31 @@ function formatModalityLabel(modality: Modality) {
   }
 
   return "Presencial";
+}
+
+function buildModalitiesQuestion(courseName: string, modalities: Modality[]) {
+  if (modalities.length === 1 && modalities[0] === Modality.EAD) {
+    return "Esse curso esta disponivel no EAD 100% Online. Voce estuda com horario flexivel e realiza as avaliacoes presenciais no polo, com agendamento previo.\nFunciona para voce?";
+  }
+
+  if (modalities.length === 1 && modalities[0] === Modality.PRESENTIAL) {
+    return `Atualmente ${courseName} e ofertado apenas na modalidade presencial, conforme as diretrizes aplicaveis ao curso.\nEssa modalidade presencial funcionaria para voce?`;
+  }
+
+  const labels = modalities.map(formatModalityLabel).join(", ");
+  return `Para ${courseName}, temos opcoes ${labels}. Qual funciona melhor para sua rotina?`;
+}
+
+function buildModalityExplanation(modality: Modality) {
+  if (modality === Modality.EAD) {
+    return "No EAD 100% Online, voce estuda com horario flexivel e realiza apenas as avaliacoes presenciais no campus ou polo, com agendamento previo.";
+  }
+
+  if (modality === Modality.SEMIPRESENTIAL) {
+    return "No Semipresencial, voce combina estudos online com encontros presenciais no polo ou campus, conforme a grade do curso.";
+  }
+
+  return "No Presencial, voce frequenta aulas no campus em dias definidos, de acordo com o turno e a grade do curso.";
 }
 
 export class CommercialFlowService {
@@ -249,6 +280,13 @@ export class CommercialFlowService {
     const normalized = normalizeText(message);
 
     if (!lead.desiredCourseId) {
+      if (isGreeting(message)) {
+        return {
+          answer: "Ola! Tudo bem?\n\nMeu nome e Joao, consultor educacional da Anhanguera.\nQual curso voce deseja fazer?",
+          shouldTransfer: false
+        };
+      }
+
       const detectedCourse = await this.courses.findByMessage(message);
 
       if (!detectedCourse) {
@@ -431,13 +469,16 @@ export class CommercialFlowService {
         };
       }
 
+      const availableModalities = this.courses.getAvailableModalities(course);
       return {
-        answer: "Tudo bem. Vou seguir com as informacoes do curso para encontrar a melhor opcao para voce.\nQual modalidade funciona melhor para sua rotina?",
+        answer: `Tudo bem. Vou seguir com as informacoes do curso para encontrar a melhor opcao para voce.\n${buildModalitiesQuestion(course.name, availableModalities)}`,
         shouldTransfer: false
       };
     }
 
     if (state.worksCurrently && !lead.companyName) {
+      const availableModalities = this.courses.getAvailableModalities(course);
+
       await this.persistState({
         leadId: lead.id,
         state: { ...state, stage: "modality" },
@@ -446,7 +487,7 @@ export class CommercialFlowService {
       });
 
       return {
-        answer: "Show! Vou registrar essa informacao para verificar a melhor condicao disponivel para o seu perfil.\nAgora me diga: qual modalidade funciona melhor para sua rotina?",
+        answer: `Show! Vou registrar essa informacao para verificar a melhor condicao disponivel para o seu perfil.\n${buildModalitiesQuestion(course.name, availableModalities)}`,
         shouldTransfer: false
       };
     }
@@ -456,9 +497,8 @@ export class CommercialFlowService {
       const requestedModality = parseModality(message) ?? state.requestedModality;
 
       if (!requestedModality) {
-        const labels = availableModalities.map(formatModalityLabel).join(", ");
         return {
-          answer: `Para ${course.name}, temos opcoes ${labels}. Qual funciona melhor para sua rotina?`,
+          answer: buildModalitiesQuestion(course.name, availableModalities),
           shouldTransfer: false
         };
       }
@@ -490,13 +530,13 @@ export class CommercialFlowService {
 
       if (requestedModality === Modality.EAD) {
         return {
-          answer: "No EAD 100% Online, voce estuda com horario flexivel e realiza apenas as avaliacoes presenciais no campus ou polo, com agendamento previo.\nPerfeito! Agora me envie seu nome completo.",
+          answer: `${buildModalityExplanation(Modality.EAD)}\nPerfeito! Agora me envie seu nome completo.`,
           shouldTransfer: false
         };
       }
 
       return {
-        answer: "Hoje funciona melhor para voce estudar de manha, a tarde ou a noite?",
+        answer: `${buildModalityExplanation(requestedModality)}\nHoje funciona melhor para voce estudar de manha, a tarde ou a noite?`,
         shouldTransfer: false
       };
     }
