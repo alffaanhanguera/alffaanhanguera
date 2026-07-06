@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("SUPABASE_DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SUPERVISOR
+  OPERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  BLOCKED
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFYING
+  READY_FOR_OPERATOR
+  IN_NEGOTIATION
+  ENROLLED
+  LOST
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  TRANSFERRED
+  CLOSED
+  ARCHIVED
+}
+
+enum ChannelType {
+  WHATSAPP
+  CRM
+  SYSTEM
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  PDF
+  LOCATION
+  SYSTEM
+}
+
+enum Modality {
+  EAD
+  SEMIPRESENTIAL
+  PRESENTIAL
+}
+
+enum EnrollmentIntent {
+  FIRST_DEGREE
+  SECOND_DEGREE
+  TRANSFER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  TRANSFER
+  CONFIG_CHANGE
+  WEBHOOK
+}
+
+model User {
+  id             String         @id @default(cuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  role           UserRole
+  status         UserStatus     @default(ACTIVE)
+  avatarUrl      String?
+  phone          String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  permissions    UserPermission[]
+  sessions       Session[]
+  ownedConversations Conversation[] @relation("AssignedOperator")
+  messages       Message[]
+  auditLogs      AuditLog[]
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  refreshTokenHash String
+  userAgent      String?
+  ipAddress      String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  revokedAt      DateTime?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String
+  createdAt   DateTime         @default(now())
+  users       UserPermission[]
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+model Lead {
+  id                 String            @id @default(cuid())
+  fullName           String
+  phone              String            @unique
+  cpf                String?
+  email              String?
+  birthDate          DateTime?
+  city               String?
+  region             String?
+  desiredCourseId    String?
+  desiredModality    Modality?
+  desiredShift       String?
+  enrollmentIntent   EnrollmentIntent?
+  hasEnem            Boolean?
+  enemYear           Int?
+  companyName        String?
+  benefitSummary     String?
+  status             LeadStatus        @default(NEW)
+  notes              String?
+  lastInteractionAt  DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  desiredCourse      Course?           @relation(fields: [desiredCourseId], references: [id])
+  conversations      Conversation[]
+}
+
+model Conversation {
+  id                    String              @id @default(cuid())
+  leadId                String
+  assignedOperatorId    String?
+  status                ConversationStatus  @default(OPEN)
+  channel               ChannelType         @default(WHATSAPP)
+  tags                  String[]
+  unreadCount           Int                 @default(0)
+  isPinned              Boolean             @default(false)
+  aiEnabled             Boolean             @default(true)
+  aiSummary             String?
+  lastMessageAt         DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  lead                  Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedOperator      User?               @relation("AssignedOperator", fields: [assignedOperatorId], references: [id])
+  messages              Message[]
+}
+
+model Message {
+  id                String            @id @default(cuid())
+  conversationId    String
+  userId            String?
+  externalMessageId String?
+  direction         MessageDirection
+  type              MessageType       @default(TEXT)
+  content           String
+  mediaUrl          String?
+  metadata          Json?
+  createdAt         DateTime          @default(now())
+  conversation      Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User?             @relation(fields: [userId], references: [id])
+}
+
+model Course {
+  id                 String      @id @default(cuid())
+  code               String      @unique
+  name               String      @unique
+  type               String
+  durationSemesters  Int
+  hasPresential      Boolean     @default(false)
+  hasSemipresential  Boolean     @default(false)
+  hasEad             Boolean     @default(false)
+  hasMatutino        Boolean     @default(false)
+  hasVespertino      Boolean     @default(false)
+  hasNoturno         Boolean     @default(false)
+  hasFlexibleHours   Boolean     @default(false)
+  autoOfferMode      Boolean     @default(false)
+  observations       String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  offers             Offer[]
+  leads              Lead[]
+}
+
+model Offer {
+  id                    String    @id @default(cuid())
+  courseId              String
+  monthlyPrice          Decimal   @db.Decimal(10, 2)
+  enrollmentFee         Decimal   @db.Decimal(10, 2)
+  firstMonthlyDueLabel  String
+  durationLabel         String
+  notes                 String?
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  course                Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model CompanyAgreement {
+  id          String   @id @default(cuid())
+  companyName String   @unique
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BenefitRule {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FaqItem {
+  id          String   @id @default(cuid())
+  category    String
+  question    String
+  answer      String
+  priority    Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiSetting {
+  id                     String   @id @default(cuid())
+  organizationName       String
+  assistantName          String
+  systemPrompt           String
+  transferPrompt         String
+  maxQuestionsBeforeHandover Int   @default(12)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model ZApiSetting {
+  id                  String   @id @default(cuid())
+  instanceId          String
+  instanceToken       String
+  clientToken         String?
+  baseUrl             String
+  webhookSecret       String?
+  isConnected         Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  userId       String?
+  entity       String
+  entityId     String
+  action       AuditAction
+  description  String
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  user         User?       @relation(fields: [userId], references: [id])
+}
+
+model IntegrationLog {
+  id           String   @id @default(cuid())
+  provider     String
+  endpoint     String
+  statusCode   Int?
+  message      String
+  payload      Json?
+  response     Json?
+  createdAt    DateTime @default(now())
+}
+
+model KnowledgeDocument {
+  id          String   @id @default(cuid())
+  title       String
+  category    String
+  content     String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
