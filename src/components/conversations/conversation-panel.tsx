@@ -1,36 +1,41 @@
-import { Paperclip, Phone, SendHorizontal, Smile, UserPlus, Video } from "lucide-react";
+import { ConversationComposer } from "@/components/conversations/conversation-composer";
+import type { ConversationDetail } from "@/types/domain";
+import { Phone, UserPlus, Video } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const mockMessages = [
-  { id: "1", author: "Maria", text: "Quero saber sobre Administracao EAD.", inbound: true, time: "09:12" },
-  { id: "2", author: "IA", text: "Claro! Em qual cidade voce pretende estudar?", inbound: false, time: "09:13" },
-  { id: "3", author: "Maria", text: "Sao Paulo, zona leste.", inbound: true, time: "09:14" },
-  { id: "4", author: "IA", text: "Perfeito. Essa seria sua primeira graduacao?", inbound: false, time: "09:14" }
-];
+export function ConversationPanel({ conversation }: { conversation: ConversationDetail | null }) {
+  if (!conversation) {
+    return (
+      <Card className="flex h-[780px] items-center justify-center p-10 text-center">
+        <div>
+          <p className="text-lg font-semibold text-slate-900">Nenhuma conversa selecionada</p>
+          <p className="mt-2 text-sm text-slate-500">Assim que um lead interagir pelo WhatsApp, o historico aparecera aqui.</p>
+        </div>
+      </Card>
+    );
+  }
 
-export function ConversationPanel() {
   return (
     <Card className="flex h-[780px] flex-col overflow-hidden p-0">
       <div className="flex items-center justify-between border-b px-5 py-4">
         <div className="flex items-center gap-3">
-          <Avatar fallback="MS" />
+          <Avatar fallback={conversation.leadName.slice(0, 2).toUpperCase()} />
           <div>
-            <p className="font-semibold text-slate-900">Maria Silva Santos</p>
+            <p className="font-semibold text-slate-900">{conversation.leadName}</p>
             <div className="mt-1 flex items-center gap-2">
-              <span className="status-dot bg-emerald-500" />
-              <p className="text-xs text-slate-500">IA ativa · digitando em tempo real</p>
+              <span className={`status-dot ${conversation.aiEnabled ? "bg-emerald-500" : "bg-orange-500"}`} />
+              <p className="text-xs text-slate-500">{conversation.aiEnabled ? "IA ativa" : "Em fila humana"} · {conversation.phone}</p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge tone="orange">EAD</Badge>
-          <Badge tone="green">Operador: Juliana</Badge>
+          <Badge tone="orange">{conversation.modality}</Badge>
+          <Badge tone="green">Operador: {conversation.operator}</Badge>
           <Button variant="outline" size="sm">
             <UserPlus className="mr-2 h-4 w-4" />
             Transferir
@@ -46,7 +51,7 @@ export function ConversationPanel() {
 
       <ScrollArea className="flex-1 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(228,236,246,0.9))] px-5 py-6">
         <div className="space-y-4">
-          {mockMessages.map((message) => (
+          {conversation.messages.map((message) => (
             <div key={message.id} className={`flex ${message.inbound ? "justify-start" : "justify-end"}`}>
               <div
                 className={`max-w-[80%] rounded-[24px] px-4 py-3 text-sm shadow-sm ${
@@ -63,25 +68,13 @@ export function ConversationPanel() {
 
       <div className="border-t bg-white px-5 py-4">
         <div className="mb-3 flex flex-wrap gap-2">
-          <Badge tone="blue">Lead qualificado</Badge>
-          <Badge tone="slate">ENEM: nao informado</Badge>
-          <Badge tone="slate">Empresa: nao informado</Badge>
-          <Badge tone="orange">Resumo pronto para operador</Badge>
+          <Badge tone="blue">{conversation.status}</Badge>
+          <Badge tone="slate">Turno: {conversation.shift}</Badge>
+          <Badge tone="slate">{conversation.benefitSummary}</Badge>
+          {conversation.aiSummary ? <Badge tone="orange">Resumo pronto para operador</Badge> : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            <Smile className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Input placeholder="Responder, enviar audio, anexos ou assumir a conversa..." />
-          <Button variant="secondary">
-            <SendHorizontal className="mr-2 h-4 w-4" />
-            Enviar
-          </Button>
-        </div>
+        <ConversationComposer conversationId={conversation.id} />
       </div>
     </Card>
   );

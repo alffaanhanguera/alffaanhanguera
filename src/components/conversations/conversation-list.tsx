@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +7,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ConversationListItem } from "@/types/domain";
 
-export function ConversationList({ items }: { items: ConversationListItem[] }) {
+export function ConversationList({
+  items,
+  selectedId
+}: {
+  items: ConversationListItem[];
+  selectedId?: string;
+}) {
   return (
     <Card className="p-0">
       <div className="border-b p-4">
@@ -25,9 +32,12 @@ export function ConversationList({ items }: { items: ConversationListItem[] }) {
       <ScrollArea className="h-[680px]">
         <div className="space-y-2 p-3">
           {items.map((item) => (
-            <button
+            <Link
               key={item.id}
-              className="flex w-full items-start gap-3 rounded-[24px] border border-transparent px-3 py-3 text-left transition hover:border-slate-200 hover:bg-slate-50"
+              href={`/conversas?conversation=${item.id}`}
+              className={`flex w-full items-start gap-3 rounded-[24px] border px-3 py-3 text-left transition hover:border-slate-200 hover:bg-slate-50 ${
+                selectedId === item.id ? "border-blue-200 bg-blue-50/60" : "border-transparent"
+              }`}
             >
               <Avatar fallback={item.name.slice(0, 2).toUpperCase()} />
               <div className="min-w-0 flex-1">
@@ -51,7 +61,7 @@ export function ConversationList({ items }: { items: ConversationListItem[] }) {
                   {item.unreadCount}
                 </span>
               ) : null}
-            </button>
+            </Link>
           ))}
         </div>
       </ScrollArea>

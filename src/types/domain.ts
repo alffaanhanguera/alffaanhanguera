@@ -22,3 +22,25 @@ export type ConversationListItem = {
   operator: string;
   tags: string[];
 };
+
+export type ConversationMessageItem = {
+  id: string;
+  text: string;
+  inbound: boolean;
+  time: string;
+  type: string;
+};
+
+export type ConversationDetail = {
+  id: string;
+  leadName: string;
+  phone: string;
+  status: string;
+  aiEnabled: boolean;
+  aiSummary: string | null;
+  operator: string;
+  modality: string;
+  shift: string;
+  benefitSummary: string;
+  messages: ConversationMessageItem[];
+};

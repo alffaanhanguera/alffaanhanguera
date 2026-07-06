@@ -13,7 +13,11 @@ export class ConversationRepository {
         take: 30,
         orderBy: { updatedAt: "desc" },
         include: {
-          lead: true,
+          lead: {
+            include: {
+              desiredCourse: true
+            }
+          },
           assignedOperator: true,
           messages: {
             orderBy: { createdAt: "desc" },
@@ -23,6 +27,31 @@ export class ConversationRepository {
       });
     } catch {
       return [];
+    }
+  }
+
+  async getById(conversationId: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    try {
+      return await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        include: {
+          lead: {
+            include: {
+              desiredCourse: true
+            }
+          },
+          assignedOperator: true,
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        }
+      });
+    } catch {
+      return null;
     }
   }
 
@@ -120,6 +149,39 @@ export class ConversationRepository {
     await prisma.conversation.update({
       where: { id: params.conversationId },
       data: {
+        lastMessageAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    return prisma.message.create({
+      data: {
+        conversationId: params.conversationId,
+        direction: "OUTBOUND",
+        type: "TEXT",
+        content: params.content,
+        metadata: params.metadata as Prisma.InputJsonValue | undefined
+      }
+    });
+  }
+
+  async createOutboundManualMessage(params: {
+    conversationId: string;
+    content: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return {
+        id: "mock-manual-message",
+        conversationId: params.conversationId,
+        content: params.content
+      };
+    }
+
+    await prisma.conversation.update({
+      where: { id: params.conversationId },
+      data: {
+        unreadCount: 0,
         lastMessageAt: new Date(),
         updatedAt: new Date()
       }
