@@ -53,6 +53,21 @@ function normalizePhone(...values: unknown[]) {
   return digits || undefined;
 }
 
+function isBrazilPhone(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  return value.startsWith("55") && value.length >= 12 && value.length <= 13;
+}
+
+function pickPhone(...values: unknown[]) {
+  const candidates = values.map((value) => normalizePhone(value)).filter((value): value is string => Boolean(value));
+  const brazilPhone = candidates.find((value) => isBrazilPhone(value));
+
+  return brazilPhone ?? candidates[0];
+}
+
 function inferType(body: Record<string, unknown>) {
   const dataNode = asRecord(body.data);
   const messageNode = asRecord(body.message);
@@ -84,32 +99,33 @@ function extractNestedPhone(body: Record<string, unknown>) {
   const messages = asArray(body.messages);
   const firstMessage = asRecord(messages[0]);
 
-  return normalizePhone(
+  return pickPhone(
     body.phone,
     body.from,
-    body.chatId,
-    body.remoteJid,
     body.senderPhone,
-    dataNode.phone,
-    dataNode.from,
-    dataNode.chatId,
-    dataNode.remoteJid,
-    messageNode.phone,
-    messageNode.from,
-    messageNode.chatId,
-    dataMessageNode.phone,
-    dataMessageNode.from,
-    dataMessageNode.chatId,
-    senderNode.phone,
-    senderNode.id,
-    chatNode.phone,
-    chatNode.id,
     contactNode.phone,
     contactNode.wa_id,
+    senderNode.phone,
     visitorNode.phone,
-    visitorNode.id,
+    dataNode.phone,
+    dataNode.from,
+    messageNode.phone,
+    messageNode.from,
+    dataMessageNode.phone,
+    dataMessageNode.from,
     firstMessage.phone,
-    firstMessage.from
+    firstMessage.from,
+    body.remoteJid,
+    dataNode.remoteJid,
+    body.chatId,
+    dataNode.chatId,
+    messageNode.chatId,
+    dataMessageNode.chatId,
+    dataNode.phone,
+    senderNode.id,
+    chatNode.id,
+    visitorNode.id,
+    chatNode.phone
   );
 }
 
