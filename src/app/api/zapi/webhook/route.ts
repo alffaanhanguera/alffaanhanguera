@@ -1,5 +1,6 @@
 import { apiError, apiSuccess } from "@/lib/http/api-response";
 import { zapiWebhookDto } from "@/server/dtos/conversation/webhook-dto";
+import { IntegrationLogRepository } from "@/server/repositories/integration-log-repository";
 import { ZapiWebhookService } from "@/server/services/zapi-webhook-service";
 
 type ZapiReceivedPayload = {
@@ -191,12 +192,44 @@ function shouldIgnorePayload(payload: ZapiReceivedPayload) {
   return null;
 }
 
+function buildWebhookSummary(payload: ZapiReceivedPayload) {
+  return {
+    type: payload.type ?? null,
+    status: payload.status ?? null,
+    fromMe: payload.fromMe ?? null,
+    isGroup: payload.isGroup ?? null,
+    isNewsletter: payload.isNewsletter ?? null,
+    isStatusReply: payload.isStatusReply ?? null,
+    waitingMessage: payload.waitingMessage ?? null,
+    notification: payload.notification ?? null,
+    phone: payload.phone ?? null,
+    connectedPhone: payload.connectedPhone ?? null,
+    participantPhone: payload.participantPhone ?? null,
+    messageId: payload.messageId ?? null
+  };
+}
+
 export async function POST(request: Request) {
+  const integrationLogs = new IntegrationLogRepository();
+
   try {
     const body = (await request.json()) as ZapiReceivedPayload;
     const ignoreReason = shouldIgnorePayload(body);
 
     if (ignoreReason) {
+      await integrationLogs.create({
+        provider: "z-api",
+        endpoint: "webhook-ignored",
+        statusCode: 200,
+        message: `Webhook ignorado: ${ignoreReason}`,
+        payload: buildWebhookSummary(body),
+        response: {
+          received: true,
+          ignored: true,
+          reason: ignoreReason
+        }
+      });
+
       return apiSuccess({
         received: true,
         ignored: true,
@@ -207,6 +240,19 @@ export async function POST(request: Request) {
     const phone = normalizePhone(body.phone);
 
     if (!isBrazilPhone(phone)) {
+      await integrationLogs.create({
+        provider: "z-api",
+        endpoint: "webhook-ignored",
+        statusCode: 200,
+        message: "Webhook ignorado: invalid_phone",
+        payload: buildWebhookSummary(body),
+        response: {
+          received: true,
+          ignored: true,
+          reason: "invalid_phone"
+        }
+      });
+
       return apiSuccess({
         received: true,
         ignored: true,
@@ -218,6 +264,19 @@ export async function POST(request: Request) {
     const text = extractText(body, type);
 
     if (!text) {
+      await integrationLogs.create({
+        provider: "z-api",
+        endpoint: "webhook-ignored",
+        statusCode: 200,
+        message: "Webhook ignorado: payload_without_content",
+        payload: buildWebhookSummary(body),
+        response: {
+          received: true,
+          ignored: true,
+          reason: "payload_without_content"
+        }
+      });
+
       return apiSuccess({
         received: true,
         ignored: true,
@@ -240,8 +299,32 @@ export async function POST(request: Request) {
       metadata: body as Record<string, unknown>
     });
 
+    await integrationLogs.create({
+      provider: "z-api",
+      endpoint: "webhook-processed",
+      statusCode: 200,
+      message: "Webhook de mensagem recebido e processado.",
+      payload: {
+        ...buildWebhookSummary(body),
+        normalizedPhone: input.phone,
+        textPreview: input.text.slice(0, 160),
+        detectedType: input.type
+      },
+      response: result as Record<string, unknown>
+    });
+
     return apiSuccess({ received: true, result });
   } catch (error) {
+    await integrationLogs.create({
+      provider: "z-api",
+      endpoint: "webhook-error",
+      statusCode: 422,
+      message: error instanceof Error ? error.message : "Webhook invalido.",
+      response: {
+        error: error instanceof Error ? error.message : "Webhook invalido."
+      }
+    });
+
     return apiError(error instanceof Error ? error.message : "Webhook invalido.", 422);
   }
 }
