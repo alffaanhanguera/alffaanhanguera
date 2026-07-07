@@ -3,6 +3,52 @@ import { CommercialFlowService } from "@/server/ai/commercial-flow-service";
 import { IntegrationLogRepository } from "@/server/repositories/integration-log-repository";
 import { ZApiClient } from "@/server/zapi/zapi-client";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function isBrazilPhone(value: string) {
+  return value.startsWith("55") && value.length >= 12 && value.length <= 13;
+}
+
+function shouldIgnoreWebhookMetadata(metadata?: Record<string, unknown>) {
+  if (!metadata) {
+    return null;
+  }
+
+  const dataNode = asRecord(metadata.data);
+  const messageNode = asRecord(metadata.message);
+  const nestedMessageNode = asRecord(dataNode.message);
+  const callbackType = firstString(
+    metadata.type,
+    metadata.event,
+    dataNode.type,
+    dataNode.event,
+    messageNode.type,
+    nestedMessageNode.type
+  );
+
+  if (callbackType && callbackType !== "ReceivedCallback") {
+    return "non_received_callback";
+  }
+
+  return null;
+}
+
 export class ZapiWebhookService {
   constructor(
     private readonly conversations = new ConversationRepository(),
@@ -18,15 +64,37 @@ export class ZapiWebhookService {
     type: "TEXT" | "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "PDF" | "LOCATION";
     metadata?: Record<string, unknown>;
   }) {
+    const metadataIgnoreReason = shouldIgnoreWebhookMetadata(input.metadata);
+
+    if (metadataIgnoreReason) {
+      return {
+        stored: false,
+        replied: false,
+        ignored: true,
+        reason: metadataIgnoreReason
+      };
+    }
+
+    const normalizedPhone = normalizePhone(input.phone);
+
+    if (!isBrazilPhone(normalizedPhone)) {
+      return {
+        stored: false,
+        replied: false,
+        ignored: true,
+        reason: "invalid_phone"
+      };
+    }
+
     const inboundMessage = await this.conversations.createInboundMessage({
-      phone: input.phone,
+      phone: normalizedPhone,
       content: input.text,
       externalMessageId: input.messageId,
       type: input.type,
       metadata: input.metadata
     });
 
-    const conversation = await this.conversations.getRecentHistoryByPhone(input.phone);
+    const conversation = await this.conversations.getRecentHistoryByPhone(normalizedPhone);
 
     if (!conversation || !conversation.aiEnabled) {
       return {
@@ -37,7 +105,7 @@ export class ZapiWebhookService {
     }
 
     const chatbotReply = await this.commercialFlow.generateReply({
-      phone: input.phone,
+      phone: normalizedPhone,
       latestMessage: input.text
     });
 
@@ -53,7 +121,7 @@ export class ZapiWebhookService {
         }
       });
 
-      const delivery = await this.zapi.sendTextMessage(input.phone, chatbotReply.answer);
+      const delivery = await this.zapi.sendTextMessage(normalizedPhone, chatbotReply.answer);
       replied = delivery.delivered;
 
       await this.integrationLogs.create({
@@ -62,7 +130,7 @@ export class ZapiWebhookService {
         statusCode: delivery.status,
         message: delivery.delivered ? "Resposta automatica do fluxo enviada." : "Falha ao enviar resposta automatica do fluxo.",
         payload: {
-          phone: input.phone,
+          phone: normalizedPhone,
           conversationId: conversation.id,
           inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
         },
@@ -84,7 +152,7 @@ export class ZapiWebhookService {
         }
       });
 
-      const followUpDelivery = await this.zapi.sendTextMessage(input.phone, followUp.content);
+      const followUpDelivery = await this.zapi.sendTextMessage(normalizedPhone, followUp.content);
       replied = replied || followUpDelivery.delivered;
 
       await this.integrationLogs.create({
@@ -93,7 +161,7 @@ export class ZapiWebhookService {
         statusCode: followUpDelivery.status,
         message: followUpDelivery.delivered ? "Retorno automatico complementar enviado." : "Falha ao enviar retorno automatico complementar.",
         payload: {
-          phone: input.phone,
+          phone: normalizedPhone,
           conversationId: conversation.id,
           inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
         },
