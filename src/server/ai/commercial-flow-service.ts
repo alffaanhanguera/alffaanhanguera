@@ -157,6 +157,24 @@ function parseEmail(message: string) {
   return match?.[0] ?? null;
 }
 
+function isRestartRequest(message: string) {
+  const normalized = normalizeText(message);
+
+  return [
+    "reiniciar",
+    "reinicia",
+    "reinicio",
+    "reiniciar fluxo",
+    "reiniciar atendimento",
+    "recomecar",
+    "recomecar",
+    "recomeçar",
+    "comecar de novo",
+    "comecar de novo",
+    "iniciar novamente"
+  ].includes(normalized);
+}
+
 function isSaoPauloCity(message: string) {
   const normalized = normalizeText(message);
   return normalized === "sao paulo" || normalized === "sp" || normalized === "sao paulo sp";
@@ -358,6 +376,40 @@ export class CommercialFlowService {
     const { lead } = conversation;
     const state = this.getWorkflowState(lead.notes);
     const message = params.latestMessage.trim();
+
+    if (isRestartRequest(message)) {
+      await this.persistState({
+        leadId: lead.id,
+        state: { stage: "ask_name" },
+        leadData: {
+          fullName: params.phone,
+          city: null,
+          region: null,
+          desiredCourseId: null,
+          desiredModality: null,
+          desiredShift: null,
+          hasEnem: null,
+          companyName: null,
+          benefitSummary: null,
+          cpf: null,
+          email: null,
+          birthDate: null,
+          status: LeadStatus.QUALIFYING
+        },
+        conversationId: conversation.id,
+        conversationData: {
+          aiEnabled: true,
+          aiSummary: null,
+          status: ConversationStatus.OPEN,
+          unreadCount: 0
+        }
+      });
+
+      return {
+        answer: buildWelcomeMessage(),
+        shouldTransfer: false
+      };
+    }
 
     if (!lead.notes && conversation.messages.length <= 1) {
       await this.persistState({
