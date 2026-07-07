@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { Bell, Search } from "lucide-react";
+import { AppMobileNav } from "@/components/layout/app-mobile-nav";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { siteConfig } from "@/config/site";
@@ -8,10 +10,11 @@ export function AppHeader() {
   return (
     <header className="glass-panel flex items-center justify-between gap-4 px-4 py-3">
       <div className="flex items-center gap-3 lg:hidden">
+        <AppMobileNav />
         <Image src={siteConfig.logoPath} alt="ALFFA Educação" width={40} height={40} className="rounded-full" />
         <div>
           <p className="text-sm font-semibold">{siteConfig.name}</p>
-          <p className="text-xs text-slate-500">CRM comercial</p>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">CRM comercial</p>
         </div>
       </div>
 
@@ -21,12 +24,15 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-4">
+        <div className="hidden xl:block">
+          <ThemeToggle />
+        </div>
         <button className="rounded-full bg-slate-100 p-3 text-slate-600">
           <Bell className="h-4 w-4" />
         </button>
         <div className="hidden text-right md:block">
           <p className="text-sm font-semibold">Administrador</p>
-          <p className="text-xs text-slate-500">Controle total da operacao</p>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">Controle total da operacao</p>
         </div>
         <Avatar fallback="AD" />
       </div>

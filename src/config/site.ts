@@ -7,6 +7,7 @@ export const siteConfig = {
     { label: "Dashboard", href: "/dashboard" },
     { label: "Conversas", href: "/conversas" },
     { label: "Leads", href: "/leads" },
+    { label: "N8N", href: "/n8n" },
     { label: "IA", href: "/ia" },
     { label: "Configuracoes", href: "/configuracoes" }
   ]

@@ -1,6 +1,25 @@
 import { LeadStatus, Modality } from "@prisma/client";
 import { LeadRepository } from "@/server/repositories/lead-repository";
 
+function formatLeadStatus(status: LeadStatus) {
+  if (status === LeadStatus.NEW) {
+    return "Novo";
+  }
+  if (status === LeadStatus.QUALIFYING) {
+    return "Qualificando";
+  }
+  if (status === LeadStatus.READY_FOR_OPERATOR) {
+    return "Pronto para operador";
+  }
+  if (status === LeadStatus.IN_NEGOTIATION) {
+    return "Negociacao";
+  }
+  if (status === LeadStatus.ENROLLED) {
+    return "Matriculado";
+  }
+  return "Perdido";
+}
+
 export class LeadService {
   constructor(private readonly repository = new LeadRepository()) {}
 
@@ -16,7 +35,7 @@ export class LeadService {
           course: "Administracao",
           modality: "EAD 100% Online",
           city: "Sao Paulo",
-          status: "QUALIFYING",
+          status: "Qualificando",
           benefitSummary: "ENEM identificado"
         }
       ];
@@ -36,8 +55,50 @@ export class LeadService {
               ? "Presencial"
               : "Nao definida",
       city: lead.city ?? "Nao informada",
-      status: lead.status ?? LeadStatus.NEW,
+      status: formatLeadStatus(lead.status ?? LeadStatus.NEW),
       benefitSummary: lead.benefitSummary ?? "Nenhum beneficio"
     }));
+  }
+
+  async getKanbanData() {
+    const leads = await this.listForPanel();
+
+    const groups = {
+      new: leads.filter((lead) => lead.status === "Novo"),
+      qualifying: leads.filter((lead) => lead.status === "Qualificando"),
+      ready: leads.filter((lead) => lead.status === "Pronto para operador"),
+      negotiation: leads.filter((lead) => lead.status === "Negociacao" || lead.status === "Matriculado")
+    };
+
+    return [
+      {
+        id: "new",
+        title: "Entrada",
+        description: "Leads recem captados pelo WhatsApp.",
+        accent: "bg-sky-500",
+        leads: groups.new
+      },
+      {
+        id: "qualifying",
+        title: "Qualificacao IA",
+        description: "Fluxo inicial e coleta de dados permitidos.",
+        accent: "bg-amber-500",
+        leads: groups.qualifying
+      },
+      {
+        id: "ready",
+        title: "Pronto para humano",
+        description: "Lead completo aguardando operador.",
+        accent: "bg-emerald-500",
+        leads: groups.ready
+      },
+      {
+        id: "negotiation",
+        title: "Fechamento",
+        description: "Negociacao e cursos vendidos.",
+        accent: "bg-violet-500",
+        leads: groups.negotiation
+      }
+    ];
   }
 }

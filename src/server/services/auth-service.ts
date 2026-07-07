@@ -80,4 +80,28 @@ export class AuthService {
       sessionId: session.id
     });
   }
+
+  async changePassword(input: { userId: string; currentPassword: string; newPassword: string }) {
+    const user = await this.repository.findUserById(input.userId);
+
+    if (!user) {
+      throw new Error("Usuario nao encontrado.");
+    }
+
+    const passwordMatches = await compare(input.currentPassword, user.passwordHash);
+
+    if (!passwordMatches) {
+      throw new Error("A senha atual esta incorreta.");
+    }
+
+    if (input.currentPassword === input.newPassword) {
+      throw new Error("A nova senha precisa ser diferente da atual.");
+    }
+
+    await this.repository.updatePasswordHash(user.id, await hash(input.newPassword, 12));
+
+    return {
+      success: true
+    };
+  }
 }

@@ -21,6 +21,24 @@
   --radius: 1rem;
 }
 
+.dark {
+  --background: 221 39% 9%;
+  --foreground: 210 40% 96%;
+  --muted: 222 26% 16%;
+  --muted-foreground: 215 20% 71%;
+  --card: 222 33% 12%;
+  --card-foreground: 210 40% 96%;
+  --border: 223 20% 22%;
+  --input: 223 20% 22%;
+  --primary: 212 100% 64%;
+  --primary-foreground: 221 39% 9%;
+  --secondary: 31 93% 58%;
+  --secondary-foreground: 221 39% 9%;
+  --accent: 216 32% 18%;
+  --accent-foreground: 210 40% 96%;
+  --ring: 212 100% 64%;
+}
+
 * {
   @apply border-border;
 }
@@ -37,8 +55,14 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(240, 245, 251, 0.92));
 }
 
+.dark body {
+  background-image:
+    radial-gradient(circle at top left, rgba(89, 144, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, rgba(11, 18, 32, 0.98), rgba(17, 24, 39, 0.95));
+}
+
 .glass-panel {
-  @apply rounded-[28px] border bg-white/80 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur;
+  @apply rounded-[28px] border bg-[hsl(var(--card))]/90 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur;
 }
 
 .status-dot {

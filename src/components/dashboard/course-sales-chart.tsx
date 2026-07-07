@@ -1,0 +1,38 @@
+import { Card } from "@/components/ui/card";
+
+export function CourseSalesChart({
+  items
+}: {
+  items: Array<{ course: string; total: number }>;
+}) {
+  const max = Math.max(...items.map((item) => item.total), 1);
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">Performance comercial</p>
+          <h2 className="mt-2 text-xl font-semibold">Cursos vendidos</h2>
+        </div>
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">Atualizacao com base nos leads matriculados</p>
+      </div>
+
+      <div className="mt-8 space-y-4">
+        {items.map((item) => (
+          <div key={item.course}>
+            <div className="mb-2 flex items-center justify-between gap-4 text-sm">
+              <span className="font-medium text-[hsl(var(--foreground))]">{item.course}</span>
+              <span className="text-[hsl(var(--muted-foreground))]">{item.total} vendas</span>
+            </div>
+            <div className="h-3 rounded-full bg-[hsl(var(--muted))]">
+              <div
+                className="h-3 rounded-full bg-[linear-gradient(90deg,#0f3b8f,#f28f2d)]"
+                style={{ width: `${Math.max((item.total / max) * 100, 12)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}

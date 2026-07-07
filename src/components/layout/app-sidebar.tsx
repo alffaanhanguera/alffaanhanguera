@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, Brain, Building2, CircleHelp, Cog, LayoutDashboard, Logs, MessageCircleMore, Shield, UserCircle2, UserCog, Users } from "lucide-react";
+import { BarChart3, BookOpen, Brain, Building2, CircleHelp, Cog, LayoutDashboard, Logs, MessageCircleMore, Network, Shield, UserCircle2, UserCog, Users } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const iconMap = {
   CircleHelp,
   Building2,
   Cog,
+  Network,
   Shield,
   Logs,
   UserCircle2
@@ -30,6 +31,7 @@ const items: Array<{ label: string; href: Route; icon: string }> = [
   { label: "Leads", href: "/leads", icon: "Users" },
   { label: "Operadores", href: "/operadores", icon: "UserCog" },
   { label: "IA", href: "/ia", icon: "Brain" },
+  { label: "N8N", href: "/n8n", icon: "Network" },
   { label: "Cursos", href: "/cursos", icon: "BookOpen" },
   { label: "Ofertas EAD", href: "/ofertas-ead", icon: "BarChart3" },
   { label: "Beneficios", href: "/beneficios", icon: "Shield" },

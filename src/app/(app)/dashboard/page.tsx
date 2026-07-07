@@ -1,3 +1,4 @@
+import { CourseSalesChart } from "@/components/dashboard/course-sales-chart";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { Card } from "@/components/ui/card";
 import { PageShell } from "@/components/shared/page-shell";
@@ -14,9 +15,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
-          <h2 className="text-lg font-semibold">Leads por dia</h2>
+          <h2 className="text-lg font-semibold">Conversao de leads por dia</h2>
           <div className="mt-6 flex items-end gap-3">
             {data.charts.leadConversion.map((value, index) => (
               <div key={value} className="flex-1">
@@ -38,6 +39,8 @@ export default async function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      <CourseSalesChart items={data.charts.courseSales} />
     </PageShell>
   );
 }

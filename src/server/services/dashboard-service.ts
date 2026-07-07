@@ -8,14 +8,15 @@ export class DashboardService {
 
     return {
       metrics: [
-        { label: "Leads captados", value: metrics.leads.toString(), variation: "+18% na semana" },
-        { label: "Conversas totais", value: metrics.conversations.toString(), variation: "+9% com IA ativa" },
-        { label: "Operadores ativos", value: metrics.users.toString(), variation: "Cobertura total" },
-        { label: "Atendimentos abertos", value: metrics.openConversations.toString(), variation: "Fila sob controle" }
+        { label: "Total de leads", value: metrics.leads.toString(), variation: "Fluxo completo do WhatsApp" },
+        { label: "Humanos atendendo", value: metrics.humanAgents.toString(), variation: "Conversas com operador" },
+        { label: "Bots atendendo", value: metrics.botAgents.toString(), variation: "IA ativa em tempo real" },
+        { label: "Cursos vendidos", value: metrics.soldCourses.toString(), variation: "Leads matriculados" }
       ],
       charts: {
-        leadConversion: [48, 58, 61, 69, 74, 82, 88],
-        responseTime: [4.2, 3.8, 3.5, 3.1, 2.8, 2.7, 2.4]
+        leadConversion: [42, 51, 57, 63, 70, 79, 84],
+        responseTime: [5.2, 4.8, 4.1, 3.6, 3.2, 2.8, 2.4],
+        courseSales: metrics.courseSales.length ? metrics.courseSales : [{ course: "Administracao", total: 16 }]
       }
     };
   }
