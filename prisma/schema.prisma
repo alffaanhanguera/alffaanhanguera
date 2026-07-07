@@ -197,7 +197,7 @@ model Message {
 model Course {
   id                 String      @id @default(cuid())
   code               String      @unique
-  name               String      @unique
+  name               String
   type               String
   durationSemesters  Int
   hasPresential      Boolean     @default(false)

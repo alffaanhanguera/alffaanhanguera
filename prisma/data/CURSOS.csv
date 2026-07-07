@@ -1,0 +1,120 @@
+Código;Curso;Tipo;Duração;Presencial;Semipresencial;EAD;Matutino;Vespertino;Noturno;Horário Flexível
+ADM001;Administração;Bacharelado;8 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+ADM002;Administração Pública;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+AGR001;Agronegócios;Tecnólogo;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+AGR002;Agronomia;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ANA001;Análise e Desenvolvimento de Sistemas;Tecnólogo;5 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+ARQ001;Arquitetura de Dados;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+ARQ002;Arquitetura e Urbanismo;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ART001;Artes Visuais;Bacharelado;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+ART002;Artes Visuais;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+AUT001;Automação Industrial;Tecnólogo;6 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+BIO001;Biomedicina;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+BLO001;Blockchain Criptomoedas e Finanças na Era Digital;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+CIB001;Cibersegurança;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+CIE001;Ciência da Computação;Bacharelado;8 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+CIE002;Ciência de Dados;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+CIE003;Ciência Política;Bacharelado;7 semestres;Não;Não;Sim;Não;Não;Não;Sim
+CIE004;Ciências Aeronáuticas;Bacharelado;6 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+CIE005;Ciências Biológicas;Bacharelado;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+CIE006;Ciências Biológicas;Licenciatura;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+CIE007;Ciências Contábeis;Bacharelado;8 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+CIE008;Ciências Econômicas;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+COA001;Coaching e Desenvolvimento Humano;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+COM001;Comércio Exterior;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+COM002;Computação em Nuvem;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+CRI001;Criminologia;Bacharelado;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+MEC001;Mecatrônica Industrial;Tecnólogo;6 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+SEG001;Segurança no Trabalho;Tecnólogo;6 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+DES001;Desenvolvimento Mobile;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+DES002;Design;Bacharelado;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+DES003;Design de Interiores;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+DES004;Design de Moda;Tecnólogo;4 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+DES005;Design Gráfico;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+DV001;Devops;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+DIR001;Direito;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+EDU001;Educação Especial;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+EDU002;Educação Física;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+EDU003;Educação Física;Licenciatura;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+EMP001;Empreendedorismo;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+EMP002;Empreendedorismo e Novos Negócios;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+ENF001;Enfermagem;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+ENG001;Engenharia Ambiental;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG002;Engenharia Ambiental e Sanitária;Bacharelado;10 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+ENG003;Engenharia Civil;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG004;Engenharia da Computação;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG005;Engenharia de Controle e Automação;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG006;Engenharia de Minas;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+ENG007;Engenharia de Produção;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG008;Engenharia de Software;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+ENG009;Engenharia Elétrica;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG010;Engenharia Mecânica;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ENG011;Engenharia Química;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+EST001;Estética e Cosmética;Tecnólogo;6 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+EVE001;Eventos;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+FAR001;Farmácia;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+FIL001;Filosofia;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+FIS001;Fisioterapia;Bacharelado;10 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+FON001;Fonoaudiologia;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+FOT001;Fotografia;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GAS001;Gastronomia;Tecnólogo;4 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+GEO001;Geografia;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+GER001;Gerontologia;Tecnólogo;4 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+GES001;Gestão Ambiental;Tecnólogo;4 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+GES002;Gestão Comercial;Tecnólogo;4 semestres;Não;Sim;Sim;Sim;Sim;Sim;Sim
+GES003;Gestão da Inovação;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES004;Gestão da Produção Industrial;Tecnólogo;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES005;Gestão de Cooperativas;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES006;Gestão de Produtos;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES007;Gestão de Recursos Humanos;Tecnólogo;4 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+GES008;Gestão de Segurança Privada;Tecnólogo;4 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+GES009;Gestão de Turismo;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES010;Gestão Financeira;Tecnólogo;4 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+GES011;Gestão Hospitalar;Tecnólogo;6 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+GES012;Gestão Portuária;Tecnólogo;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+GES013;Gestão Pública;Tecnólogo;4 semestres;Não;Sim;Sim;Sim;Sim;Sim;Sim
+HIS001;História;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+INT001;Inteligência de Mercado e Análise de Dados;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+INV001;Investigação e Perícia Criminal;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+JOG001;Jogos Digitais;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+JOR001;Jornalismo;Bacharelado;8 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+LET001;Letras Português;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+LET002;Letras Português e Espanhol;Licenciatura;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+LET003;Letras Português e Inglês;Bacharelado;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+LET004;Letras Português e Inglês;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+LET005;Letras Português e Inglês;Licenciatura;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+LOG001;Logística;Tecnólogo;4 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+MAR001;Marketing;Tecnólogo;4 semestres;Sim;Sim;Sim;Sim;Sim;Sim;Sim
+MAR002;Marketing Digital;Tecnólogo;4 semestres;Não;Sim;Sim;Sim;Sim;Sim;Sim
+MAR003;Marketing e Propaganda;Bacharelado;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+MAT001;Matemática;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+MED001;Mediação;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+MED002;Medicina Veterinária;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+NEG001;Negócios Imobiliários;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+NUT001;Nutrição;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+ODO001;Odontologia;Bacharelado;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+PED001;Pedagogia;Licenciatura;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+POD001;Podologia;Tecnólogo;4 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+PRO001;Processos Gerenciais;Tecnólogo;4 semestres;Não;Sim;Sim;Sim;Sim;Sim;Sim
+PRO002;Produção Audiovisual;Tecnólogo;4 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+PSI001;Psicologia;Bacharelado;10 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+PSI002;Psicopedagogia;Bacharelado;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+PUB001;Publicidade e Propaganda;Bacharelado;8 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+PUB002;Publicidade Propaganda e Marketing;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+QUI001;Química;Bacharelado;6 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+QUI002;Química;Licenciatura;8 semestres;Sim;Não;Não;Sim;Sim;Sim;Não
+RAD001;Radiologia;Tecnólogo;6 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+RED001;Rede de Computadores;Tecnólogo;5 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+REL001;Relações Internacionais;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SEC001;Secretariado;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SEG001;Segurança da Informação;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SEG002;Segurança no Trabalho;Tecnólogo;6 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SEG003;Segurança Pública;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SER001;Serviço Social;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+SER002;Serviços Jurídicos Cartorários e Notariais;Tecnólogo;4 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SIS001;Sistemas de Informação;Bacharelado;8 semestres;Sim;Não;Sim;Sim;Sim;Sim;Sim
+SIS002;Sistemas para Internet;Tecnólogo;5 semestres;Não;Não;Sim;Não;Não;Não;Sim
+SOC001;Sociologia;Licenciatura;8 semestres;Não;Sim;Não;Sim;Sim;Sim;Não
+TEO001;Teologia;Bacharelado;8 semestres;Não;Não;Sim;Não;Não;Não;Sim
+TER001;Terapia Ocupacional;Bacharelado;8 semestres;Sim;Sim;Não;Sim;Sim;Sim;Não
+TER002;Terapias Integrativas e Complementares;Tecnólogo;4 semestres;Não;Sim;Não;Sim;Sim;Sim;Não

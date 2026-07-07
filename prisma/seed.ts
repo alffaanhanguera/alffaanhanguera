@@ -53,38 +53,6 @@ async function main() {
     skipDuplicates: true
   });
 
-  const administrationCourse = await prisma.course.upsert({
-    where: { code: "ADM001" },
-    update: {},
-    create: {
-      code: "ADM001",
-      name: "Administracao",
-      type: "Bacharelado",
-      durationSemesters: 8,
-      hasPresential: true,
-      hasSemipresential: true,
-      hasEad: true,
-      hasMatutino: true,
-      hasNoturno: true,
-      hasFlexibleHours: true,
-      autoOfferMode: true
-    }
-  });
-
-  await prisma.offer.upsert({
-    where: { id: "offer_adm_ead_default" },
-    update: {},
-    create: {
-      id: "offer_adm_ead_default",
-      courseId: administrationCourse.id,
-      monthlyPrice: "109.00",
-      enrollmentFee: "109.00",
-      firstMonthlyDueLabel: "Proximo mes da campanha vigente",
-      durationLabel: "8 semestres",
-      notes: "Oferta padrao do EAD 100% Online"
-    }
-  });
-
   await prisma.benefitRule.createMany({
     data: [
       { code: "ENEM", title: "ENEM", description: "Registrar ENEM nos ultimos 10 anos. Nao calcular bolsa." },
