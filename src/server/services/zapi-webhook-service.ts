@@ -3,6 +3,9 @@ import { CommercialFlowService } from "@/server/ai/commercial-flow-service";
 import { IntegrationLogRepository } from "@/server/repositories/integration-log-repository";
 import { ZApiClient } from "@/server/zapi/zapi-client";
 
+const PROVISIONAL_ALLOWED_PHONE = "5511978140022";
+const PROVISIONAL_FLOW_ACTIVATION_AT = new Date("2026-07-07T19:25:50-03:00");
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -47,6 +50,14 @@ function shouldIgnoreWebhookMetadata(metadata?: Record<string, unknown>) {
   }
 
   return null;
+}
+
+function isFlowAllowed(params: { phone: string; createdAt: Date }) {
+  if (params.phone === PROVISIONAL_ALLOWED_PHONE) {
+    return true;
+  }
+
+  return params.createdAt >= PROVISIONAL_FLOW_ACTIVATION_AT;
 }
 
 export class ZapiWebhookService {
@@ -101,6 +112,40 @@ export class ZapiWebhookService {
         stored: true,
         replied: false,
         automation: "crm-only"
+      };
+    }
+
+    if (!isFlowAllowed({ phone: normalizedPhone, createdAt: conversation.lead.createdAt })) {
+      if (conversation.aiEnabled) {
+        await this.conversations.updateConversation(conversation.id, {
+          aiEnabled: false
+        });
+      }
+
+      await this.integrationLogs.create({
+        provider: "z-api",
+        endpoint: "chatbot-flow-gated",
+        statusCode: 200,
+        message: "Lead salvo no CRM sem automacao por regra provisoria de producao.",
+        payload: {
+          phone: normalizedPhone,
+          leadCreatedAt: conversation.lead.createdAt.toISOString(),
+          activationAt: PROVISIONAL_FLOW_ACTIVATION_AT.toISOString(),
+          allowedLegacyPhone: PROVISIONAL_ALLOWED_PHONE
+        },
+        response: {
+          stored: true,
+          replied: false,
+          automation: "crm-only",
+          gated: true
+        }
+      });
+
+      return {
+        stored: true,
+        replied: false,
+        automation: "crm-only",
+        gated: true
       };
     }
 
