@@ -20,6 +20,28 @@ function firstString(...values: unknown[]) {
   return undefined;
 }
 
+function firstBoolean(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+
+      if (normalized === "true") {
+        return true;
+      }
+
+      if (normalized === "false") {
+        return false;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function normalizePhone(...values: unknown[]) {
   const raw = firstString(...values);
 
@@ -142,9 +164,72 @@ function extractWebhookMessage(body: Record<string, unknown>) {
   };
 }
 
+function shouldIgnoreWebhook(body: Record<string, unknown>) {
+  const dataNode = asRecord(body.data);
+  const messageNode = asRecord(body.message);
+  const dataMessageNode = asRecord(dataNode.message);
+  const firstMessage = asRecord(asArray(body.messages)[0]);
+
+  const fromMe = firstBoolean(
+    body.fromMe,
+    body.from_me,
+    body.isFromMe,
+    body.isSentByMe,
+    body.sentByMe,
+    dataNode.fromMe,
+    dataNode.from_me,
+    messageNode.fromMe,
+    messageNode.from_me,
+    dataMessageNode.fromMe,
+    dataMessageNode.from_me,
+    firstMessage.fromMe,
+    firstMessage.from_me
+  );
+
+  if (fromMe === true) {
+    return {
+      ignored: true,
+      reason: "outbound_message_event"
+    };
+  }
+
+  const event = firstString(
+    body.type,
+    body.event,
+    body.messageType,
+    body.eventType,
+    dataNode.type,
+    dataNode.event,
+    messageNode.type,
+    dataMessageNode.type
+  )?.toLowerCase();
+
+  if (event && (event.includes("sent") || event.includes("status") || event.includes("delivery") || event.includes("ack"))) {
+    return {
+      ignored: true,
+      reason: "status_event"
+    };
+  }
+
+  return {
+    ignored: false,
+    reason: null
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const ignoreDecision = shouldIgnoreWebhook(asRecord(body));
+
+    if (ignoreDecision.ignored) {
+      return apiSuccess({
+        received: true,
+        ignored: true,
+        reason: ignoreDecision.reason
+      });
+    }
+
     const extracted = extractWebhookMessage(asRecord(body));
 
     if (!extracted.phone) {

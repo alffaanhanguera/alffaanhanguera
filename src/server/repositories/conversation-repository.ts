@@ -70,6 +70,19 @@ export class ConversationRepository {
       };
     }
 
+    if (params.externalMessageId) {
+      const existingMessage = await prisma.message.findFirst({
+        where: {
+          externalMessageId: params.externalMessageId,
+          direction: "INBOUND"
+        }
+      });
+
+      if (existingMessage) {
+        return existingMessage;
+      }
+    }
+
     const lead = await prisma.lead.upsert({
       where: { phone: params.phone },
       update: { lastInteractionAt: new Date() },
