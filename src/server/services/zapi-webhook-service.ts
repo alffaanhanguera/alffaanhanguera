@@ -41,33 +41,69 @@ export class ZapiWebhookService {
       latestMessage: input.text
     });
 
-    await this.conversations.createOutboundAiMessage({
-      conversationId: conversation.id,
-      content: chatbotReply.answer,
-      metadata: {
-        source: "chatbot-flow",
-        shouldTransfer: chatbotReply.shouldTransfer
-      }
-    });
+    let replied = false;
 
-    const delivery = await this.zapi.sendTextMessage(input.phone, chatbotReply.answer);
-
-    await this.integrationLogs.create({
-      provider: "z-api",
-      endpoint: "chatbot-flow-reply",
-      statusCode: delivery.status,
-      message: delivery.delivered ? "Resposta automatica do fluxo enviada." : "Falha ao enviar resposta automatica do fluxo.",
-      payload: {
-        phone: input.phone,
+    if (chatbotReply.answer?.trim()) {
+      await this.conversations.createOutboundAiMessage({
         conversationId: conversation.id,
-        inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
-      },
-      response: delivery
-    });
+        content: chatbotReply.answer,
+        metadata: {
+          source: "chatbot-flow",
+          shouldTransfer: chatbotReply.shouldTransfer
+        }
+      });
+
+      const delivery = await this.zapi.sendTextMessage(input.phone, chatbotReply.answer);
+      replied = delivery.delivered;
+
+      await this.integrationLogs.create({
+        provider: "z-api",
+        endpoint: "chatbot-flow-reply",
+        statusCode: delivery.status,
+        message: delivery.delivered ? "Resposta automatica do fluxo enviada." : "Falha ao enviar resposta automatica do fluxo.",
+        payload: {
+          phone: input.phone,
+          conversationId: conversation.id,
+          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
+        },
+        response: delivery
+      });
+    }
+
+    for (const followUp of chatbotReply.followUps ?? []) {
+      if (followUp.delayMs) {
+        await new Promise((resolve) => setTimeout(resolve, followUp.delayMs));
+      }
+
+      await this.conversations.createOutboundAiMessage({
+        conversationId: conversation.id,
+        content: followUp.content,
+        metadata: {
+          source: "chatbot-flow-follow-up",
+          shouldTransfer: chatbotReply.shouldTransfer
+        }
+      });
+
+      const followUpDelivery = await this.zapi.sendTextMessage(input.phone, followUp.content);
+      replied = replied || followUpDelivery.delivered;
+
+      await this.integrationLogs.create({
+        provider: "z-api",
+        endpoint: "chatbot-flow-follow-up",
+        statusCode: followUpDelivery.status,
+        message: followUpDelivery.delivered ? "Retorno automatico complementar enviado." : "Falha ao enviar retorno automatico complementar.",
+        payload: {
+          phone: input.phone,
+          conversationId: conversation.id,
+          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
+        },
+        response: followUpDelivery
+      });
+    }
 
     return {
       stored: true,
-      replied: delivery.delivered,
+      replied,
       shouldTransfer: chatbotReply.shouldTransfer,
       automation: "chatbot-flow"
     };

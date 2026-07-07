@@ -1,4 +1,4 @@
-import { ConversationStatus, EnrollmentIntent, LeadStatus, Modality } from "@prisma/client";
+import { ConversationStatus, LeadStatus, Modality } from "@prisma/client";
 import { formatCurrency, sanitizeDigits } from "@/lib/utils";
 import { ConversationRepository } from "@/server/repositories/conversation-repository";
 import { CourseRepository } from "@/server/repositories/course-repository";
@@ -6,30 +6,44 @@ import { CourseRepository } from "@/server/repositories/course-repository";
 const ASSISTANT_NAME = "Juliana";
 
 type WorkflowStage =
-  | "course"
-  | "city"
-  | "region"
-  | "graduation"
-  | "high_school"
-  | "enem"
-  | "work"
-  | "company"
-  | "modality"
-  | "shift"
-  | "full_name"
-  | "cpf"
-  | "birth_date"
-  | "email"
-  | "ead_offer"
-  | "handover"
+  | "ask_name"
+  | "ask_course"
+  | "ask_city"
+  | "ask_region"
+  | "ask_enem"
+  | "ask_clt"
+  | "ask_company"
+  | "ask_modality"
+  | "confirm_ead"
+  | "collect_full_name"
+  | "collect_cpf"
+  | "collect_birth_date"
+  | "collect_email"
+  | "ead_offer_sent"
+  | "ask_shift"
   | "completed";
 
 type WorkflowState = {
   stage: WorkflowStage;
-  highSchoolCompleted?: boolean;
-  worksCurrently?: boolean;
-  requestedModality?: Modality;
+  firstName?: string;
+  cityRequiresRegion?: boolean;
+  enemAnswered?: boolean;
+  worksClt?: boolean;
+  companyAsked?: boolean;
+  selectedModality?: Modality;
+  simulationDelivered?: boolean;
   transferred?: boolean;
+};
+
+type ChatbotFollowUp = {
+  delayMs?: number;
+  content: string;
+};
+
+type ChatbotReply = {
+  answer?: string;
+  shouldTransfer: boolean;
+  followUps?: ChatbotFollowUp[];
 };
 
 function normalizeText(value: string) {
@@ -54,28 +68,10 @@ function parseYesNo(message: string) {
   return null;
 }
 
-function parseIntent(message: string) {
-  const normalized = normalizeText(message);
-
-  if (normalized.includes("ja tenho") || normalized.includes("já tenho") || normalized.includes("concluida")) {
-    return EnrollmentIntent.SECOND_DEGREE;
-  }
-
-  if (normalized.includes("transfer") || normalized.includes("comecei") || normalized.includes("nao terminei") || normalized.includes("não terminei")) {
-    return EnrollmentIntent.TRANSFER;
-  }
-
-  if (normalized.includes("primeira") || normalized === "sim") {
-    return EnrollmentIntent.FIRST_DEGREE;
-  }
-
-  return null;
-}
-
 function parseModality(message: string) {
   const normalized = normalizeText(message);
 
-  if (normalized.includes("semipresencial") || normalized.includes("cme")) {
+  if (normalized.includes("semi") || normalized.includes("cme")) {
     return Modality.SEMIPRESENTIAL;
   }
 
@@ -93,33 +89,65 @@ function parseModality(message: string) {
 function parseShift(message: string) {
   const normalized = normalizeText(message);
 
-  if (normalized.includes("manha") || normalized.includes("manhã") || normalized.includes("matut")) {
-    return "Matutino";
+  if (normalized.includes("diurno") || normalized.includes("manha") || normalized.includes("manhã")) {
+    return "Diurno";
   }
 
-  if (normalized.includes("tarde") || normalized.includes("vespertino")) {
-    return "Vespertino";
-  }
-
-  if (normalized.includes("noite") || normalized.includes("noturno")) {
+  if (normalized.includes("noturno") || normalized.includes("noite")) {
     return "Noturno";
-  }
-
-  if (normalized.includes("flex")) {
-    return "Horario Flexivel";
   }
 
   return null;
 }
 
 function parseBirthDate(message: string) {
-  const match = message.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  const digits = message.replace(/\D/g, "");
+  let day = "";
+  let month = "";
+  let year = "";
 
-  if (!match) {
+  if (digits.length === 8) {
+    day = digits.slice(0, 2);
+    month = digits.slice(2, 4);
+    year = digits.slice(4, 8);
+  } else {
+    const basicMatch = message.match(/(\d{2})[\/.\-\s](\d{2})[\/.\-\s](\d{4})/);
+
+    if (basicMatch) {
+      [, day, month, year] = basicMatch;
+    } else {
+      const monthMap: Record<string, string> = {
+        janeiro: "01",
+        fevereiro: "02",
+        marco: "03",
+        abril: "04",
+        maio: "05",
+        junho: "06",
+        julho: "07",
+        agosto: "08",
+        setembro: "09",
+        outubro: "10",
+        novembro: "11",
+        dezembro: "12"
+      };
+
+      const normalized = normalizeText(message);
+      const longMatch = normalized.match(/(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})/);
+
+      if (!longMatch) {
+        return null;
+      }
+
+      day = longMatch[1].padStart(2, "0");
+      month = monthMap[longMatch[2]] ?? "";
+      year = longMatch[3];
+    }
+  }
+
+  if (!day || !month || !year) {
     return null;
   }
 
-  const [, day, month, year] = match;
   const date = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -129,159 +157,74 @@ function parseEmail(message: string) {
   return match?.[0] ?? null;
 }
 
-function isGreeting(message: string) {
+function isSaoPauloCity(message: string) {
   const normalized = normalizeText(message);
-
-  return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)\b/.test(normalized);
+  return normalized === "sao paulo" || normalized === "sp" || normalized === "sao paulo sp";
 }
 
 function formatModalityLabel(modality: Modality) {
   if (modality === Modality.EAD) {
-    return "EAD 100% Online";
+    return "EAD";
   }
 
   if (modality === Modality.SEMIPRESENTIAL) {
-    return "Semipresencial";
+    return "Semi-Presencial";
   }
 
   return "Presencial";
 }
 
-function buildModalitiesQuestion(courseName: string, modalities: Modality[]) {
-  if (modalities.length === 1 && modalities[0] === Modality.EAD) {
-    return "Esse curso esta disponivel no EAD 100% Online. Voce estuda com horario flexivel e realiza as avaliacoes presenciais no polo, com agendamento previo.\nFunciona para voce?";
-  }
-
-  if (modalities.length === 1 && modalities[0] === Modality.PRESENTIAL) {
-    return `Atualmente ${courseName} e ofertado apenas na modalidade presencial, conforme as diretrizes aplicaveis ao curso.\nEssa modalidade presencial funcionaria para voce?`;
-  }
-
-  const labels = modalities.map(formatModalityLabel).join(", ");
-  return `Para ${courseName}, temos opcoes ${labels}. Qual funciona melhor para sua rotina?`;
+function buildWelcomeMessage() {
+  return [
+    "Olá! 😊",
+    "Seja bem-vindo(a) à Anhanguera.",
+    "",
+    `Meu nome é ${ASSISTANT_NAME} e vou te ajudar com sua matricula.`,
+    "",
+    "Qual seu nome por gentileza?"
+  ].join("\n");
 }
 
-function buildModalityExplanation(modality: Modality) {
-  if (modality === Modality.EAD) {
-    return "No EAD 100% Online, voce estuda com horario flexivel e realiza apenas as avaliacoes presenciais no campus ou polo, com agendamento previo.";
-  }
-
-  if (modality === Modality.SEMIPRESENTIAL) {
-    return "No Semipresencial, voce combina estudos online com encontros presenciais no polo ou campus, conforme a grade do curso.";
-  }
-
-  return "No Presencial, voce frequenta aulas no campus em dias definidos, de acordo com o turno e a grade do curso.";
+function buildModalitiesMessage(firstName: string, courseName: string, modalities: Modality[]) {
+  return `${firstName} 😊, a faculdade de ${courseName} nós ofertamos nas modalidades: ${modalities
+    .map(formatModalityLabel)
+    .join(", ")}, qual funciona melhor para você?`;
 }
 
-function buildGreeting(courseSuggestions: string[]) {
-  const suggestions = courseSuggestions.length
-    ? `\nAlguns cursos que posso te ajudar agora: ${courseSuggestions.join(", ")}.`
-    : "";
-
-  return `Ola! Tudo bem?\n\nMeu nome e ${ASSISTANT_NAME}, consultora educacional da Anhanguera.\nQual curso voce deseja fazer?${suggestions}`;
+function buildEadExplanation() {
+  return [
+    "No EAD você estuda com flexibilidade, acessa o conteúdo online e realiza as avaliações presenciais quando necessário no polo.",
+    "",
+    "Funciona para você o EAD?"
+  ].join("\n");
 }
 
-function hasPriceQuestion(message: string) {
-  return /(valor|preco|preço|quanto custa|mensalidade)/i.test(message);
+function buildNonEadExplanation(modality: Modality, firstName: string) {
+  const explanation =
+    modality === Modality.PRESENTIAL
+      ? "No presencial você frequenta aulas na unidade, com rotina fixa e acompanhamento direto."
+      : "No semi-presencial você combina estudos online com encontros presenciais na unidade.";
+
+  return `${explanation}\n\n${firstName} 😊! Os turnos disponiveis são:\n\nDiurno: 8h às 11h\nNoturno: 19 às 22h\n\nQual funciona melhor para você?`;
 }
 
-function buildDataCollectionPrompt() {
-  return "Perfeito! Para deixar seu atendimento pronto e preparar a proposta da sua matricula, me envie por gentileza: nome completo, CPF, data de nascimento e e-mail.";
+function buildSilentSummaryStatus(modality: Modality | null | undefined) {
+  return modality === Modality.EAD ? "Pronto para continuidade manual do EAD" : "Pronto para simulacao manual";
 }
 
-function buildMissingDataPrompt(missingFields: string[]) {
-  return `Perfeito! Para eu concluir seu atendimento, me envie por gentileza: ${missingFields.join(", ")}.`;
+function formatBirthDate(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR").format(date);
 }
 
-function extractLeadFields(message: string) {
-  const cpfMatch = message.match(/\b\d{3}\D?\d{3}\D?\d{3}\D?\d{2}\b/);
-  const birthDateMatch = message.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
-  const emailMatch = message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+function extractFirstName(message: string) {
+  const sanitized = message.replace(/[^\p{L}\s'-]/gu, " ").replace(/\s+/g, " ").trim();
 
-  let remaining = message;
-
-  if (cpfMatch) {
-    remaining = remaining.replace(cpfMatch[0], " ");
+  if (!sanitized) {
+    return null;
   }
 
-  if (birthDateMatch) {
-    remaining = remaining.replace(birthDateMatch[0], " ");
-  }
-
-  if (emailMatch) {
-    remaining = remaining.replace(emailMatch[0], " ");
-  }
-
-  remaining = remaining
-    .replace(/nome completo|nome|cpf|data de nascimento|nascimento|e-mail|email/gi, " ")
-    .replace(/[:;\-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const cpf = cpfMatch ? sanitizeDigits(cpfMatch[0]) : "";
-  const birthDate = birthDateMatch ? parseBirthDate(birthDateMatch[0]) : null;
-  const email = emailMatch?.[0] ?? null;
-  const fullName = remaining.length >= 5 && /[a-z]/i.test(remaining) ? remaining : null;
-
-  return {
-    cpf: cpf.length === 11 ? cpf : null,
-    birthDate,
-    email,
-    fullName
-  };
-}
-
-function getMissingLeadFields(lead: {
-  fullName: string;
-  phone: string;
-  cpf: string | null;
-  birthDate: Date | null;
-  email: string | null;
-}) {
-  const missingFields: string[] = [];
-
-  if (lead.fullName === lead.phone) {
-    missingFields.push("nome completo");
-  }
-
-  if (!lead.cpf) {
-    missingFields.push("CPF");
-  }
-
-  if (!lead.birthDate) {
-    missingFields.push("data de nascimento");
-  }
-
-  if (!lead.email) {
-    missingFields.push("e-mail");
-  }
-
-  return missingFields;
-}
-
-function buildObjectionReply(message: string) {
-  const normalized = normalizeText(message);
-
-  if (normalized.includes("esta caro") || normalized.includes("ta caro") || normalized.includes("tá caro")) {
-    return "Entendo. Por isso verificamos beneficios como ENEM, empresa, transferencia ou segunda graduacao. Posso conferir se existe alguma condicao melhor para o seu perfil.";
-  }
-
-  if (normalized.includes("vou pensar")) {
-    return "Tudo bem. So para eu te ajudar melhor: sua duvida maior e sobre valor, horario ou modalidade?";
-  }
-
-  if (normalized.includes("tem desconto")) {
-    return "Podemos verificar. Alguns beneficios dependem do seu perfil, como ENEM, empresa, transferencia ou segunda graduacao.";
-  }
-
-  if (normalized.includes("mec")) {
-    return "Sim, os cursos seguem as regras do ensino superior. Posso verificar as informacoes do curso especifico para voce.";
-  }
-
-  if (normalized.includes("vestibular")) {
-    return "Depende da forma de ingresso. Em alguns casos, como ENEM, pode haver possibilidade de aproveitamento. O operador confirma no fechamento.";
-  }
-
-  return null;
+  const [firstName] = sanitized.split(" ");
+  return firstName || null;
 }
 
 export class CommercialFlowService {
@@ -292,14 +235,14 @@ export class CommercialFlowService {
 
   private getWorkflowState(notes?: string | null): WorkflowState {
     if (!notes) {
-      return { stage: "course" };
+      return { stage: "ask_name" };
     }
 
     try {
       const parsed = JSON.parse(notes) as WorkflowState;
-      return parsed.stage ? parsed : { stage: "course" };
+      return parsed.stage ? parsed : { stage: "ask_name" };
     } catch {
-      return { stage: "course" };
+      return { stage: "ask_name" };
     }
   }
 
@@ -322,69 +265,92 @@ export class CommercialFlowService {
     }
   }
 
-  private async handover(conversationId: string, leadId: string, summary: string, statusLabel: string) {
-    await this.persistState({
-      leadId,
-      state: { stage: "completed", transferred: true },
-      leadData: { status: LeadStatus.READY_FOR_OPERATOR },
-      benefitSummary: summary,
-      conversationId,
-      conversationData: {
-        aiEnabled: false,
-        aiSummary: summary,
-        status: ConversationStatus.TRANSFERRED
-      }
-    });
-
-    return {
-      answer: `${statusLabel}\n\nResumo para operador:\n${summary}`,
-      shouldTransfer: true
-    };
-  }
-
   private buildSummary(conversation: Awaited<ReturnType<ConversationRepository["getRecentHistoryByPhone"]>>) {
     if (!conversation) {
-      return "Resumo indisponivel.";
+      return "Resumo indisponível.";
     }
 
     const { lead } = conversation;
     const state = this.getWorkflowState(lead.notes);
 
     return [
-      `Nome completo: ${lead.fullName || "Nao informado"}`,
-      `CPF: ${lead.cpf || "Nao informado"}`,
-      `Data de nascimento: ${lead.birthDate ? new Intl.DateTimeFormat("pt-BR").format(lead.birthDate) : "Nao informado"}`,
-      `E-mail: ${lead.email || "Nao informado"}`,
+      `Nome: ${lead.fullName || state.firstName || "Nao informado"}`,
       `Curso: ${lead.desiredCourse?.name || "Nao informado"}`,
-      `Tipo: ${lead.desiredCourse?.type || "Nao informado"}`,
       `Cidade: ${lead.city || "Nao informado"}`,
       `Regiao: ${lead.region || "Nao informado"}`,
+      `ENEM: ${lead.hasEnem === null || lead.hasEnem === undefined ? "Nao informado" : lead.hasEnem ? "Sim" : "Nao"}`,
+      `CLT: ${state.worksClt === undefined ? "Nao informado" : state.worksClt ? "Sim" : "Nao"}`,
+      `Empresa: ${lead.companyName || "Nao informado"}`,
       `Modalidade: ${lead.desiredModality ? formatModalityLabel(lead.desiredModality) : "Nao informado"}`,
       `Turno: ${lead.desiredShift || "Nao informado"}`,
-      `Primeira graduacao: ${
-        lead.enrollmentIntent === EnrollmentIntent.FIRST_DEGREE
-          ? "Sim"
-          : lead.enrollmentIntent === EnrollmentIntent.SECOND_DEGREE
-            ? "Nao - segunda graduacao"
-            : lead.enrollmentIntent === EnrollmentIntent.TRANSFER
-              ? "Nao - transferencia"
-              : "Nao informado"
-      }`,
-      `Ensino Medio: ${state.highSchoolCompleted === undefined ? "Nao informado" : state.highSchoolCompleted ? "Concluido" : "Pendente"}`,
-      `ENEM: ${lead.hasEnem === undefined || lead.hasEnem === null ? "Nao informado" : lead.hasEnem ? "Sim" : "Nao"}`,
-      `Empresa: ${lead.companyName || "Nao informado"}`,
-      `Beneficio identificado: ${lead.benefitSummary || "Nao identificado"}`,
-      `Status: Pronto para ${lead.desiredModality === Modality.EAD ? "finalizacao manual" : "envio de oferta manual"}`
+      `CPF: ${lead.cpf || "Nao informado"}`,
+      `Nascimento: ${lead.birthDate ? formatBirthDate(lead.birthDate) : "Nao informado"}`,
+      `E-mail: ${lead.email || "Nao informado"}`,
+      `Status: ${buildSilentSummaryStatus(lead.desiredModality)}`
     ].join("\n");
   }
 
-  async generateReply(params: { phone: string; latestMessage: string }) {
-    const conversation = await this.conversations.getRecentHistoryByPhone(params.phone, 20);
-    const courseSuggestions = await this.courses.listNames(6);
+  private async transferToOperator(params: {
+    conversationId: string;
+    leadId: string;
+    state: WorkflowState;
+    summary: string;
+    visibleMessage?: string;
+  }): Promise<ChatbotReply> {
+    await this.persistState({
+      leadId: params.leadId,
+      state: { ...params.state, stage: "completed", transferred: true },
+      leadData: {
+        status: LeadStatus.READY_FOR_OPERATOR
+      },
+      benefitSummary: params.summary,
+      conversationId: params.conversationId,
+      conversationData: {
+        aiEnabled: false,
+        aiSummary: params.summary,
+        status: ConversationStatus.TRANSFERRED
+      }
+    });
+
+    return {
+      answer: params.visibleMessage,
+      shouldTransfer: true
+    };
+  }
+
+  private buildOfferMessage(course: NonNullable<Awaited<ReturnType<CourseRepository["findById"]>>>) {
+    const offer = course.offers[0];
+
+    if (!offer) {
+      return [
+        "Vou realizar uma simulação e já te encaminho as informações.",
+        "",
+        "No momento a oferta deste curso ainda será validada manualmente com um consultor."
+      ].join("\n");
+    }
+
+    return [
+      `🧡 ${course.name.toUpperCase()} – ${course.type.toUpperCase()} 🧡`,
+      `*🎓 Modalidade:* EAD`,
+      `*⏳ Horário:* Flexível`,
+      `*📅 Duração:* ${offer.durationLabel}`,
+      `*💰 Mensalidade:* De 299,00 por ${formatCurrency(offer.monthlyPrice.toNumber())}*`,
+      `*💳 Matrícula:* ${formatCurrency(offer.enrollmentFee.toNumber())}*`,
+      "",
+      `📅 A primeira mensalidade será paga somente no mês de ${offer.firstMonthlyDueLabel}.`,
+      "",
+      "ℹ️ _Existe apenas o reajuste anual pelo ipca, conforme legislação vigente._",
+      "",
+      "Gostaria de prosseguir com a matrícula?"
+    ].join("\n");
+  }
+
+  async generateReply(params: { phone: string; latestMessage: string }): Promise<ChatbotReply> {
+    const conversation = await this.conversations.getRecentHistoryByPhone(params.phone, 30);
 
     if (!conversation) {
       return {
-        answer: buildGreeting(courseSuggestions),
+        answer: buildWelcomeMessage(),
         shouldTransfer: false
       };
     }
@@ -392,396 +358,350 @@ export class CommercialFlowService {
     const { lead } = conversation;
     const state = this.getWorkflowState(lead.notes);
     const message = params.latestMessage.trim();
-    const normalized = normalizeText(message);
-    const objectionReply = buildObjectionReply(message);
 
-    if (!lead.desiredCourseId) {
-      if (isGreeting(message)) {
-        return {
-          answer: buildGreeting(courseSuggestions),
-          shouldTransfer: false
-        };
-      }
-
-      const detectedCourse = await this.courses.findByMessage(message);
-
-      if (!detectedCourse) {
-        return {
-          answer: hasPriceQuestion(message)
-            ? "Claro! Vou te passar certinho. So preciso confirmar primeiro qual curso voce deseja fazer."
-            : courseSuggestions.length
-              ? `Perfeito! Qual curso voce deseja fazer?\nPosso te ajudar, por exemplo, com: ${courseSuggestions.join(", ")}.`
-              : "Perfeito! Qual curso voce deseja fazer?",
-          shouldTransfer: false
-        };
-      }
-
-      const requestedModality = parseModality(message) ?? state.requestedModality;
+    if (!lead.notes && conversation.messages.length <= 1) {
       await this.persistState({
         leadId: lead.id,
-        state: { ...state, stage: "city", requestedModality },
+        state: { stage: "ask_name" },
         leadData: {
-          desiredCourseId: detectedCourse.id,
           status: LeadStatus.QUALIFYING
         }
       });
 
       return {
-        answer: hasPriceQuestion(message)
-          ? "Claro! Eu verifico a melhor condicao para voce. O valor pode variar conforme curso, cidade, modalidade e beneficios disponiveis.\nPrimeiro, em qual cidade voce pretende estudar?"
-          : `Perfeito! Em qual cidade voce mora ou pretende estudar para ${detectedCourse.name}?`,
+        answer: buildWelcomeMessage(),
         shouldTransfer: false
       };
     }
 
-    const course = await this.courses.findById(lead.desiredCourseId);
+    if (state.stage === "ask_name") {
+      const firstName = extractFirstName(message) ?? "Aluno";
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { stage: "ask_course", firstName },
+        leadData: {
+          fullName: firstName
+        }
+      });
+
+      return {
+        answer: "Qual faculdade você deseja fazer?",
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "ask_course") {
+      const course = await this.courses.findByMessage(message);
+
+      if (!course) {
+        return {
+          answer: "Qual faculdade você deseja fazer?",
+          shouldTransfer: false
+        };
+      }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "ask_city" },
+        leadData: {
+          desiredCourseId: course.id
+        }
+      });
+
+      return {
+        answer: "Em qual cidade você reside?",
+        shouldTransfer: false
+      };
+    }
+
+    const course = lead.desiredCourseId ? await this.courses.findById(lead.desiredCourseId) : null;
 
     if (!course) {
       return {
-        answer: "Nao consegui localizar esse curso na base agora. Vou encaminhar para um consultor validar para voce.",
-        shouldTransfer: true
-      };
-    }
-
-    if (!lead.city) {
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "region" },
-        leadData: { city: message }
-      });
-
-      return {
-        answer: `Perfeito! Em qual regiao de ${message} fica melhor para voce?`,
+        answer: "Qual faculdade você deseja fazer?",
         shouldTransfer: false
       };
     }
 
-    if (!lead.region) {
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "graduation" },
-        leadData: { region: message }
-      });
-
-      return {
-        answer: "Essa seria sua primeira graduacao?",
-        shouldTransfer: false
-      };
-    }
-
-    if (objectionReply) {
-      return {
-        answer: objectionReply,
-        shouldTransfer: false
-      };
-    }
-
-    if (!lead.enrollmentIntent) {
-      const intent = parseIntent(message);
-
-      if (!intent) {
-        return {
-          answer: "So para eu registrar certinho: essa seria sua primeira graduacao, segunda graduacao ou transferencia?",
-          shouldTransfer: false
-        };
-      }
-
-      const benefitSummary =
-        intent === EnrollmentIntent.SECOND_DEGREE
-          ? "Possivel beneficio de segunda graduacao"
-          : intent === EnrollmentIntent.TRANSFER
-            ? "Possivel transferencia"
-            : null;
+    if (state.stage === "ask_city") {
+      const cityRequiresRegion = isSaoPauloCity(message);
 
       await this.persistState({
         leadId: lead.id,
-        state: { ...state, stage: "high_school" },
-        leadData: {
-          enrollmentIntent: intent
+        state: {
+          ...state,
+          stage: cityRequiresRegion ? "ask_region" : "ask_enem",
+          cityRequiresRegion
         },
-        benefitSummary
-      });
-
-      if (intent === EnrollmentIntent.SECOND_DEGREE) {
-        return {
-          answer: "Perfeito! Voce pode ter direito a beneficio de segunda graduacao. Vou registrar essa informacao para a proposta.\nVoce ja concluiu o Ensino Medio?",
-          shouldTransfer: false
-        };
-      }
-
-      if (intent === EnrollmentIntent.TRANSFER) {
-        return {
-          answer: "Entendi. Nesse caso podemos verificar possibilidade de transferencia ou aproveitamento. Vou registrar para analise da proposta.\nVoce ja concluiu o Ensino Medio?",
-          shouldTransfer: false
-        };
-      }
-
-      return {
-        answer: "Voce ja concluiu o Ensino Medio?",
-        shouldTransfer: false
-      };
-    }
-
-    if (state.highSchoolCompleted === undefined) {
-      const yesNo = parseYesNo(message);
-
-      if (yesNo === null) {
-        return {
-          answer: "So para eu registrar: voce ja concluiu o Ensino Medio?",
-          shouldTransfer: false
-        };
-      }
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "enem", highSchoolCompleted: yesNo }
-      });
-
-      return {
-        answer: "Voce realizou a prova do ENEM nos ultimos 10 anos?",
-        shouldTransfer: false
-      };
-    }
-
-    if (lead.hasEnem === null || lead.hasEnem === undefined) {
-      const yesNo = parseYesNo(message);
-
-      if (yesNo === null) {
-        return {
-          answer: "Voce realizou a prova do ENEM nos ultimos 10 anos?",
-          shouldTransfer: false
-        };
-      }
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "work" },
         leadData: {
-          hasEnem: yesNo
-        },
-        benefitSummary: yesNo
-          ? [lead.benefitSummary, "ENEM identificado"].filter(Boolean).join(" | ")
-          : lead.benefitSummary
+          city: message
+        }
       });
 
       return {
-        answer: yesNo
-          ? "Otimo! O ENEM pode ajudar na analise de beneficio. Depois vamos precisar de um print das suas notas pelo site do INEP, tudo bem?\nVoce trabalha atualmente?"
-          : "Sem problemas. Vamos seguir verificando outras possibilidades para voce.\nVoce trabalha atualmente?",
+        answer: cityRequiresRegion ? "Me informe a região por gentileza?" : "Você realizou o ENEM nos últimos 10 anos?",
         shouldTransfer: false
       };
     }
 
-    if (state.worksCurrently === undefined) {
-      const yesNo = parseYesNo(message);
+    if (state.stage === "ask_region") {
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "ask_enem" },
+        leadData: {
+          region: message
+        }
+      });
 
-      if (yesNo === null) {
-        return {
-          answer: "Voce trabalha atualmente?",
-          shouldTransfer: false
-        };
-      }
+      return {
+        answer: "Você realizou o ENEM nos últimos 10 anos?",
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "ask_enem") {
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "ask_clt", enemAnswered: true },
+        leadData: {
+          hasEnem: parseYesNo(message)
+        }
+      });
+
+      return {
+        answer: "Você trabalha no regime CLT atualmente?",
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "ask_clt") {
+      const worksClt = parseYesNo(message) === true;
 
       await this.persistState({
         leadId: lead.id,
-        state: { ...state, stage: yesNo ? "company" : "modality", worksCurrently: yesNo }
+        state: {
+          ...state,
+          stage: worksClt ? "ask_company" : "ask_modality",
+          worksClt
+        }
       });
 
-      if (yesNo) {
-        return {
-          answer: "Em qual empresa voce trabalha? Pergunto porque temos parceria com varias empresas e pode existir beneficio convenio.",
-          shouldTransfer: false
-        };
-      }
-
-      const availableModalities = this.courses.getAvailableModalities(course);
-      return {
-        answer: `Tudo bem. Vou seguir com as informacoes do curso para encontrar a melhor opcao para voce.\n${buildModalitiesQuestion(course.name, availableModalities)}`,
-        shouldTransfer: false
-      };
-    }
-
-    if (state.worksCurrently && !lead.companyName) {
-      const availableModalities = this.courses.getAvailableModalities(course);
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "modality" },
-        leadData: { companyName: message },
-        benefitSummary: [lead.benefitSummary, `Possivel convenio empresa: ${message}`].filter(Boolean).join(" | ")
-      });
-
-      return {
-        answer: `Show! Vou registrar essa informacao para verificar a melhor condicao disponivel para o seu perfil.\n${buildModalitiesQuestion(course.name, availableModalities)}`,
-        shouldTransfer: false
-      };
-    }
-
-    if (!lead.desiredModality) {
-      const availableModalities = this.courses.getAvailableModalities(course);
-      const requestedModality = parseModality(message) ?? state.requestedModality;
-
-      if (!requestedModality) {
-        return {
-          answer: buildModalitiesQuestion(course.name, availableModalities),
-          shouldTransfer: false
-        };
-      }
-
-      if (!availableModalities.includes(requestedModality)) {
-        const labels = availableModalities.map(formatModalityLabel);
-        const fallback =
-          course.name.toLowerCase().includes("direito") && availableModalities.includes(Modality.PRESENTIAL)
-            ? "Atualmente Direito e ofertado apenas na modalidade presencial, conforme as diretrizes aplicaveis ao curso.\nEssa modalidade presencial funcionaria para voce?"
-            : `No momento, ${course.name} nao esta disponivel em ${formatModalityLabel(requestedModality)}. Podemos verificar ${labels.join(" ou ")}. Qual delas faria mais sentido para voce?`;
-
-        await this.persistState({
-          leadId: lead.id,
-          state: { ...state, requestedModality }
-        });
-
-        return {
-          answer: fallback,
-          shouldTransfer: false
-        };
-      }
-
-      const nextStage = requestedModality === Modality.EAD ? "full_name" : "shift";
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: nextStage, requestedModality },
-        leadData: { desiredModality: requestedModality }
-      });
-
-      if (requestedModality === Modality.EAD) {
-        return {
-          answer: `${buildModalityExplanation(Modality.EAD)}\n${buildDataCollectionPrompt()}`,
-          shouldTransfer: false
-        };
-      }
-
-      return {
-        answer: `${buildModalityExplanation(requestedModality)}\nHoje funciona melhor para voce estudar de manha, a tarde ou a noite?`,
-        shouldTransfer: false
-      };
-    }
-
-    if (lead.desiredModality !== Modality.EAD && !lead.desiredShift) {
-      const shift = parseShift(message);
-
-      if (!shift) {
-        return {
-          answer: "Hoje funciona melhor para voce estudar de manha, a tarde ou a noite?",
-          shouldTransfer: false
-        };
-      }
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "full_name" },
-        leadData: { desiredShift: shift }
-      });
-
-      return {
-        answer: `Perfeito. Vou registrar o turno ${shift} para a proposta.\n${buildDataCollectionPrompt()}`,
-        shouldTransfer: false
-      };
-    }
-
-    const missingLeadFields = getMissingLeadFields(lead);
-
-    if (missingLeadFields.length > 0) {
-      const extractedFields = extractLeadFields(message);
-      const leadData: Record<string, unknown> = {};
-
-      if (lead.fullName === lead.phone && extractedFields.fullName) {
-        leadData.fullName = extractedFields.fullName;
-      }
-
-      if (!lead.cpf && extractedFields.cpf) {
-        leadData.cpf = extractedFields.cpf;
-      }
-
-      if (!lead.birthDate && extractedFields.birthDate) {
-        leadData.birthDate = extractedFields.birthDate;
-      }
-
-      if (!lead.email && extractedFields.email) {
-        leadData.email = extractedFields.email;
-      }
-
-      if (Object.keys(leadData).length > 0) {
-        await this.persistState({
-          leadId: lead.id,
-          state: { ...state, stage: "ead_offer" },
-          leadData
-        });
-      }
-
-      const refreshedConversation = await this.conversations.getRecentHistoryByPhone(params.phone, 20);
-      const refreshedLead = refreshedConversation?.lead ?? lead;
-      const remainingFields = getMissingLeadFields(refreshedLead);
-
-      if (remainingFields.length > 0) {
-        return {
-          answer: buildMissingDataPrompt(remainingFields),
-          shouldTransfer: false
-        };
-      }
-
-      if (refreshedLead.desiredModality === Modality.EAD && course.autoOfferMode && course.offers[0]) {
-        const offer = course.offers[0];
+      if (worksClt) {
         return {
           answer:
-            `Vou consultar a oferta disponivel para o curso.\n\n` +
-            `${course.name} EAD 100% Online - ${course.type}\n` +
-            `Modalidade: Online\n` +
-            `Horario: Livre\n` +
-            `Duracao: ${offer.durationLabel}\n` +
-            `Mensalidade: ${formatCurrency(offer.monthlyPrice.toNumber())}\n` +
-            `Matricula: ${formatCurrency(offer.enrollmentFee.toNumber())}\n` +
-            `A 1a mensalidade fica para ${offer.firstMonthlyDueLabel}.\n` +
-            `As mensalidades possuem reajuste anual previsto em contrato, que normalmente varia entre 1% e 6%.\n` +
-            `Podemos seguir com sua matricula?`,
+            "Pergunto por que possuímos convênio com diversas empresas e vou verificar se você possui direito ao beneficio.\n\nEm qual empresa você trabalha?",
           shouldTransfer: false
         };
       }
 
-      const summary = this.buildSummary(refreshedConversation);
-      return this.handover(
-        conversation.id,
-        lead.id,
-        summary,
-        refreshedLead.desiredModality === Modality.PRESENTIAL
-          ? "Perfeito! Como o curso presencial pode variar conforme unidade, turno e beneficios disponiveis, vou deixar suas informacoes prontas para apresentar a melhor condicao para voce.\nVou encaminhar seu atendimento para um consultor finalizar a proposta com os valores corretos."
-          : "Perfeito! Como essa modalidade pode variar conforme unidade e beneficios disponiveis, vou organizar suas informacoes para o consultor preparar a melhor condicao para voce.\nAguarde so um instante, vou encaminhar seu atendimento."
-      );
+      return {
+        answer: "Ok, sem problemas! 😊",
+        shouldTransfer: false,
+        followUps: [
+          {
+            content: buildModalitiesMessage(state.firstName ?? "Aluno", course.name, this.courses.getAvailableModalities(course))
+          }
+        ]
+      };
     }
 
-    if (lead.desiredModality === Modality.EAD) {
-      const accepted = parseYesNo(message);
+    if (state.stage === "ask_company") {
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "ask_modality", companyAsked: true },
+        leadData: {
+          companyName: message
+        },
+        benefitSummary: `Possivel convenio empresa: ${message}`
+      });
 
-      if (accepted === true) {
-        const updatedConversation = await this.conversations.getRecentHistoryByPhone(params.phone, 20);
-        const summary = this.buildSummary(updatedConversation);
-        return this.handover(
-          conversation.id,
-          lead.id,
-          summary,
-          "Perfeito! Vou encaminhar seu atendimento para finalizar sua inscricao e gerar a forma de pagamento.\nUm consultor vai seguir com os proximos passos: pagamento, vestibular quando necessario, aceite de contrato e liberacao do RA."
-        );
-      }
+      return {
+        answer: buildModalitiesMessage(state.firstName ?? "Aluno", course.name, this.courses.getAvailableModalities(course)),
+        shouldTransfer: false
+      };
+    }
 
-      if (normalized.includes("desconto") || normalized.includes("bolsa")) {
+    if (state.stage === "ask_modality") {
+      const selectedModality = parseModality(message);
+      const availableModalities = this.courses.getAvailableModalities(course);
+
+      if (!selectedModality || !availableModalities.includes(selectedModality)) {
         return {
-          answer: "No EAD 100% Online, a oferta vigente ja esta em condicao promocional. Por isso, essa modalidade segue com o valor da campanha, sem aplicacao de bolsa adicional.\nPosso seguir com essa condicao para voce?",
+          answer: buildModalitiesMessage(state.firstName ?? "Aluno", course.name, availableModalities),
           shouldTransfer: false
         };
       }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: {
+          ...state,
+          stage: selectedModality === Modality.EAD ? "confirm_ead" : "ask_shift",
+          selectedModality
+        },
+        leadData: {
+          desiredModality: selectedModality
+        }
+      });
+
+      if (selectedModality === Modality.EAD) {
+        return {
+          answer: buildEadExplanation(),
+          shouldTransfer: false
+        };
+      }
+
+      return {
+        answer: buildNonEadExplanation(selectedModality, state.firstName ?? "Aluno"),
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "confirm_ead") {
+      if (parseYesNo(message) !== true) {
+        return {
+          answer: "Funciona para você o EAD?",
+          shouldTransfer: false
+        };
+      }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "collect_full_name" }
+      });
+
+      return {
+        answer: "Perfeito, para preparar sua simulação eu preciso apenas de algumas informações:\n\nMe informa o seu *NOME COMPLETO*",
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "collect_full_name") {
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "collect_cpf" },
+        leadData: {
+          fullName: message
+        }
+      });
+
+      return {
+        answer: `Anotado, seu nome completo é *${message}* , agora me informe o seu CPF:`,
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "collect_cpf") {
+      const cpf = sanitizeDigits(message);
+
+      if (cpf.length !== 11) {
+        return {
+          answer: "Me informe o seu CPF por gentileza?",
+          shouldTransfer: false
+        };
+      }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "collect_birth_date" },
+        leadData: {
+          cpf
+        }
+      });
+
+      return {
+        answer: "Cadastrei o CPF informado no sistema, qual é sua data de nascimento?",
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "collect_birth_date") {
+      const birthDate = parseBirthDate(message);
+
+      if (!birthDate) {
+        return {
+          answer: "Qual é sua data de nascimento?",
+          shouldTransfer: false
+        };
+      }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "collect_email" },
+        leadData: {
+          birthDate
+        }
+      });
+
+      return {
+        answer: `Sua data de nascimento é ${formatBirthDate(birthDate)}, já estamos quase finalizando 😊\n\nMe informe seu e-mail por gentileza?`,
+        shouldTransfer: false
+      };
+    }
+
+    if (state.stage === "collect_email") {
+      const email = parseEmail(message);
+
+      if (!email) {
+        return {
+          answer: "Me informe seu e-mail por gentileza?",
+          shouldTransfer: false
+        };
+      }
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "ead_offer_sent", simulationDelivered: true },
+        leadData: {
+          email
+        }
+      });
+
+      return {
+        answer: "Vou realizar uma simulação e já te encaminho as informações.",
+        shouldTransfer: false,
+        followUps: [
+          {
+            delayMs: 30000,
+            content: this.buildOfferMessage(course)
+          }
+        ]
+      };
+    }
+
+    if (state.stage === "ead_offer_sent") {
+      const summary = this.buildSummary(await this.conversations.getRecentHistoryByPhone(params.phone, 30));
+      return this.transferToOperator({
+        conversationId: conversation.id,
+        leadId: lead.id,
+        state,
+        summary
+      });
+    }
+
+    if (state.stage === "ask_shift") {
+      const shift = parseShift(message) ?? message;
+
+      await this.persistState({
+        leadId: lead.id,
+        state: { ...state, stage: "completed" },
+        leadData: {
+          desiredShift: shift
+        }
+      });
+
+      const summary = this.buildSummary(await this.conversations.getRecentHistoryByPhone(params.phone, 30));
+      return this.transferToOperator({
+        conversationId: conversation.id,
+        leadId: lead.id,
+        state,
+        summary,
+        visibleMessage: "Vou realizar uma simulação e já te encaminho as informações. 😊"
+      });
     }
 
     return {
-      answer: "Perfeito! Vou seguir com seu atendimento sem repetir o que voce ja me informou. Se preferir, posso encaminhar agora para um consultor concluir os proximos passos.",
       shouldTransfer: false
     };
   }
