@@ -8,7 +8,7 @@ export default async function ConfiguracoesPage() {
   const settings = await new SettingsService().getPanelData();
 
   return (
-    <PageShell title="Configuracoes" description="Central unica para OpenAI, Z-API, politicas da IA, dominios, webhooks, mensagens automaticas e parametros operacionais.">
+    <PageShell title="Configuracoes" description="Central unica para OpenAI, Z-API, politicas do Chatbot Juliana, dominios, webhooks, mensagens automaticas e parametros operacionais.">
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <h2 className="text-lg font-semibold">OpenAI</h2>

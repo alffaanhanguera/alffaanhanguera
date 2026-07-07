@@ -59,7 +59,7 @@ export class OpenAIClient {
 
     if (!response.ok) {
       return {
-        answer: "Nao foi possivel consultar a IA no momento. Encaminhando para operador.",
+        answer: "Nao foi possivel consultar a base de conhecimento no momento. Encaminhando para operador.",
         source: "error",
         shouldTransfer: true
       };

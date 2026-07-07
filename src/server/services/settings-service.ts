@@ -9,8 +9,8 @@ export class SettingsService {
     return {
       ai: settings.ai ?? {
         organizationName: "Alffa Educacao",
-        assistantName: "Joao",
-        systemPrompt: "Configurar chave OpenAI para ativar respostas reais.",
+        assistantName: "Juliana",
+        systemPrompt: "Chatbot Juliana configurado para seguir o fluxo comercial, consultar a base de conhecimento e transferir quando houver etapa manual.",
         transferPrompt: "Transferir quando houver regra manual."
       },
       zapi: settings.zapi ?? {

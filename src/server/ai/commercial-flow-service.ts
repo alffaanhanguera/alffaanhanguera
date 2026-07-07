@@ -3,6 +3,8 @@ import { formatCurrency, sanitizeDigits } from "@/lib/utils";
 import { ConversationRepository } from "@/server/repositories/conversation-repository";
 import { CourseRepository } from "@/server/repositories/course-repository";
 
+const ASSISTANT_NAME = "Juliana";
+
 type WorkflowStage =
   | "course"
   | "city"
@@ -170,6 +172,118 @@ function buildModalityExplanation(modality: Modality) {
   return "No Presencial, voce frequenta aulas no campus em dias definidos, de acordo com o turno e a grade do curso.";
 }
 
+function buildGreeting(courseSuggestions: string[]) {
+  const suggestions = courseSuggestions.length
+    ? `\nAlguns cursos que posso te ajudar agora: ${courseSuggestions.join(", ")}.`
+    : "";
+
+  return `Ola! Tudo bem?\n\nMeu nome e ${ASSISTANT_NAME}, consultora educacional da Anhanguera.\nQual curso voce deseja fazer?${suggestions}`;
+}
+
+function hasPriceQuestion(message: string) {
+  return /(valor|preco|preço|quanto custa|mensalidade)/i.test(message);
+}
+
+function buildDataCollectionPrompt() {
+  return "Perfeito! Para deixar seu atendimento pronto e preparar a proposta da sua matricula, me envie por gentileza: nome completo, CPF, data de nascimento e e-mail.";
+}
+
+function buildMissingDataPrompt(missingFields: string[]) {
+  return `Perfeito! Para eu concluir seu atendimento, me envie por gentileza: ${missingFields.join(", ")}.`;
+}
+
+function extractLeadFields(message: string) {
+  const cpfMatch = message.match(/\b\d{3}\D?\d{3}\D?\d{3}\D?\d{2}\b/);
+  const birthDateMatch = message.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+  const emailMatch = message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+
+  let remaining = message;
+
+  if (cpfMatch) {
+    remaining = remaining.replace(cpfMatch[0], " ");
+  }
+
+  if (birthDateMatch) {
+    remaining = remaining.replace(birthDateMatch[0], " ");
+  }
+
+  if (emailMatch) {
+    remaining = remaining.replace(emailMatch[0], " ");
+  }
+
+  remaining = remaining
+    .replace(/nome completo|nome|cpf|data de nascimento|nascimento|e-mail|email/gi, " ")
+    .replace(/[:;\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const cpf = cpfMatch ? sanitizeDigits(cpfMatch[0]) : "";
+  const birthDate = birthDateMatch ? parseBirthDate(birthDateMatch[0]) : null;
+  const email = emailMatch?.[0] ?? null;
+  const fullName = remaining.length >= 5 && /[a-z]/i.test(remaining) ? remaining : null;
+
+  return {
+    cpf: cpf.length === 11 ? cpf : null,
+    birthDate,
+    email,
+    fullName
+  };
+}
+
+function getMissingLeadFields(lead: {
+  fullName: string;
+  phone: string;
+  cpf: string | null;
+  birthDate: Date | null;
+  email: string | null;
+}) {
+  const missingFields: string[] = [];
+
+  if (lead.fullName === lead.phone) {
+    missingFields.push("nome completo");
+  }
+
+  if (!lead.cpf) {
+    missingFields.push("CPF");
+  }
+
+  if (!lead.birthDate) {
+    missingFields.push("data de nascimento");
+  }
+
+  if (!lead.email) {
+    missingFields.push("e-mail");
+  }
+
+  return missingFields;
+}
+
+function buildObjectionReply(message: string) {
+  const normalized = normalizeText(message);
+
+  if (normalized.includes("esta caro") || normalized.includes("ta caro") || normalized.includes("tá caro")) {
+    return "Entendo. Por isso verificamos beneficios como ENEM, empresa, transferencia ou segunda graduacao. Posso conferir se existe alguma condicao melhor para o seu perfil.";
+  }
+
+  if (normalized.includes("vou pensar")) {
+    return "Tudo bem. So para eu te ajudar melhor: sua duvida maior e sobre valor, horario ou modalidade?";
+  }
+
+  if (normalized.includes("tem desconto")) {
+    return "Podemos verificar. Alguns beneficios dependem do seu perfil, como ENEM, empresa, transferencia ou segunda graduacao.";
+  }
+
+  if (normalized.includes("mec")) {
+    return "Sim, os cursos seguem as regras do ensino superior. Posso verificar as informacoes do curso especifico para voce.";
+  }
+
+  if (normalized.includes("vestibular")) {
+    return "Depende da forma de ingresso. Em alguns casos, como ENEM, pode haver possibilidade de aproveitamento. O operador confirma no fechamento.";
+  }
+
+  return null;
+}
+
 export class CommercialFlowService {
   constructor(
     private readonly conversations = new ConversationRepository(),
@@ -266,10 +380,11 @@ export class CommercialFlowService {
 
   async generateReply(params: { phone: string; latestMessage: string }) {
     const conversation = await this.conversations.getRecentHistoryByPhone(params.phone, 20);
+    const courseSuggestions = await this.courses.listNames(6);
 
     if (!conversation) {
       return {
-        answer: "Ola! Tudo bem?\n\nMeu nome e Joao, consultor educacional da Anhanguera.\nQual curso voce deseja fazer?",
+        answer: buildGreeting(courseSuggestions),
         shouldTransfer: false
       };
     }
@@ -278,11 +393,12 @@ export class CommercialFlowService {
     const state = this.getWorkflowState(lead.notes);
     const message = params.latestMessage.trim();
     const normalized = normalizeText(message);
+    const objectionReply = buildObjectionReply(message);
 
     if (!lead.desiredCourseId) {
       if (isGreeting(message)) {
         return {
-          answer: "Ola! Tudo bem?\n\nMeu nome e Joao, consultor educacional da Anhanguera.\nQual curso voce deseja fazer?",
+          answer: buildGreeting(courseSuggestions),
           shouldTransfer: false
         };
       }
@@ -291,9 +407,11 @@ export class CommercialFlowService {
 
       if (!detectedCourse) {
         return {
-          answer: normalized.includes("valor")
+          answer: hasPriceQuestion(message)
             ? "Claro! Vou te passar certinho. So preciso confirmar primeiro qual curso voce deseja fazer."
-            : "Perfeito! Qual curso voce deseja fazer?",
+            : courseSuggestions.length
+              ? `Perfeito! Qual curso voce deseja fazer?\nPosso te ajudar, por exemplo, com: ${courseSuggestions.join(", ")}.`
+              : "Perfeito! Qual curso voce deseja fazer?",
           shouldTransfer: false
         };
       }
@@ -309,8 +427,8 @@ export class CommercialFlowService {
       });
 
       return {
-        answer: normalized.includes("valor")
-          ? "Claro! Eu verifico a melhor condicao para voce. O valor pode variar conforme cidade, modalidade e beneficios disponiveis.\nPrimeiro, em qual cidade voce pretende estudar?"
+        answer: hasPriceQuestion(message)
+          ? "Claro! Eu verifico a melhor condicao para voce. O valor pode variar conforme curso, cidade, modalidade e beneficios disponiveis.\nPrimeiro, em qual cidade voce pretende estudar?"
           : `Perfeito! Em qual cidade voce mora ou pretende estudar para ${detectedCourse.name}?`,
         shouldTransfer: false
       };
@@ -347,6 +465,13 @@ export class CommercialFlowService {
 
       return {
         answer: "Essa seria sua primeira graduacao?",
+        shouldTransfer: false
+      };
+    }
+
+    if (objectionReply) {
+      return {
+        answer: objectionReply,
         shouldTransfer: false
       };
     }
@@ -530,7 +655,7 @@ export class CommercialFlowService {
 
       if (requestedModality === Modality.EAD) {
         return {
-          answer: `${buildModalityExplanation(Modality.EAD)}\nPerfeito! Agora me envie seu nome completo.`,
+          answer: `${buildModalityExplanation(Modality.EAD)}\n${buildDataCollectionPrompt()}`,
           shouldTransfer: false
         };
       }
@@ -558,85 +683,53 @@ export class CommercialFlowService {
       });
 
       return {
-        answer: `Perfeito. Vou registrar o turno ${shift} para a proposta.\nAgora me envie seu nome completo.`,
+        answer: `Perfeito. Vou registrar o turno ${shift} para a proposta.\n${buildDataCollectionPrompt()}`,
         shouldTransfer: false
       };
     }
 
-    if (!lead.cpf && lead.fullName === lead.phone) {
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "cpf" },
-        leadData: { fullName: message }
-      });
+    const missingLeadFields = getMissingLeadFields(lead);
 
-      return {
-        answer: "Perfeito! Agora me envie seu CPF.",
-        shouldTransfer: false
-      };
-    }
+    if (missingLeadFields.length > 0) {
+      const extractedFields = extractLeadFields(message);
+      const leadData: Record<string, unknown> = {};
 
-    if (!lead.cpf) {
-      const cpf = sanitizeDigits(message);
+      if (lead.fullName === lead.phone && extractedFields.fullName) {
+        leadData.fullName = extractedFields.fullName;
+      }
 
-      if (cpf.length !== 11) {
+      if (!lead.cpf && extractedFields.cpf) {
+        leadData.cpf = extractedFields.cpf;
+      }
+
+      if (!lead.birthDate && extractedFields.birthDate) {
+        leadData.birthDate = extractedFields.birthDate;
+      }
+
+      if (!lead.email && extractedFields.email) {
+        leadData.email = extractedFields.email;
+      }
+
+      if (Object.keys(leadData).length > 0) {
+        await this.persistState({
+          leadId: lead.id,
+          state: { ...state, stage: "ead_offer" },
+          leadData
+        });
+      }
+
+      const refreshedConversation = await this.conversations.getRecentHistoryByPhone(params.phone, 20);
+      const refreshedLead = refreshedConversation?.lead ?? lead;
+      const remainingFields = getMissingLeadFields(refreshedLead);
+
+      if (remainingFields.length > 0) {
         return {
-          answer: "Pode me enviar o CPF com 11 digitos, por favor?",
+          answer: buildMissingDataPrompt(remainingFields),
           shouldTransfer: false
         };
       }
 
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "birth_date" },
-        leadData: { cpf }
-      });
-
-      return {
-        answer: "Perfeito! Agora me informe sua data de nascimento no formato DD/MM/AAAA.",
-        shouldTransfer: false
-      };
-    }
-
-    if (!lead.birthDate) {
-      const birthDate = parseBirthDate(message);
-
-      if (!birthDate) {
-        return {
-          answer: "Pode me informar sua data de nascimento no formato DD/MM/AAAA?",
-          shouldTransfer: false
-        };
-      }
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "email" },
-        leadData: { birthDate }
-      });
-
-      return {
-        answer: "Perfeito! Agora me envie seu e-mail.",
-        shouldTransfer: false
-      };
-    }
-
-    if (!lead.email) {
-      const email = parseEmail(message);
-
-      if (!email) {
-        return {
-          answer: "Pode me enviar um e-mail valido, por favor?",
-          shouldTransfer: false
-        };
-      }
-
-      await this.persistState({
-        leadId: lead.id,
-        state: { ...state, stage: "ead_offer" },
-        leadData: { email }
-      });
-
-      if (lead.desiredModality === Modality.EAD && course.autoOfferMode && course.offers[0]) {
+      if (refreshedLead.desiredModality === Modality.EAD && course.autoOfferMode && course.offers[0]) {
         const offer = course.offers[0];
         return {
           answer:
@@ -654,14 +747,14 @@ export class CommercialFlowService {
         };
       }
 
-      const summary = this.buildSummary(await this.conversations.getRecentHistoryByPhone(params.phone, 20));
+      const summary = this.buildSummary(refreshedConversation);
       return this.handover(
         conversation.id,
         lead.id,
         summary,
-        lead.desiredModality === Modality.PRESENTIAL
-          ? "Perfeito! Vou encaminhar seu atendimento para um consultor finalizar a proposta com os valores corretos."
-          : "Perfeito! Vou organizar suas informacoes para o consultor preparar a melhor condicao para voce."
+        refreshedLead.desiredModality === Modality.PRESENTIAL
+          ? "Perfeito! Como o curso presencial pode variar conforme unidade, turno e beneficios disponiveis, vou deixar suas informacoes prontas para apresentar a melhor condicao para voce.\nVou encaminhar seu atendimento para um consultor finalizar a proposta com os valores corretos."
+          : "Perfeito! Como essa modalidade pode variar conforme unidade e beneficios disponiveis, vou organizar suas informacoes para o consultor preparar a melhor condicao para voce.\nAguarde so um instante, vou encaminhar seu atendimento."
       );
     }
 

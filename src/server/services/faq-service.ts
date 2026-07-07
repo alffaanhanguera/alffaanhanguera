@@ -17,7 +17,7 @@ export class FaqService {
               id: "mock-faq",
               category: "Matricula",
               question: "Como funciona a matricula no EAD?",
-              answer: "A IA deve explicar o fluxo geral e transferir quando houver aceite comercial.",
+              answer: "O Chatbot Juliana deve explicar o fluxo geral e transferir quando houver aceite comercial.",
               priority: 10,
               active: true,
               createdAt: new Date(),
@@ -31,7 +31,7 @@ export class FaqService {
               id: "mock-doc",
               title: "Regras comerciais base",
               category: "Politicas",
-              content: "Documento de apoio para respostas seguras e consulta da IA.",
+              content: "Documento de apoio para respostas seguras e consulta do Chatbot Juliana.",
               active: true,
               createdAt: new Date(),
               updatedAt: new Date()

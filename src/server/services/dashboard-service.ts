@@ -10,7 +10,7 @@ export class DashboardService {
       metrics: [
         { label: "Total de leads", value: metrics.leads.toString(), variation: "Fluxo completo do WhatsApp" },
         { label: "Humanos atendendo", value: metrics.humanAgents.toString(), variation: "Conversas com operador" },
-        { label: "Bots atendendo", value: metrics.botAgents.toString(), variation: "IA ativa em tempo real" },
+        { label: "Bots atendendo", value: metrics.botAgents.toString(), variation: "Chatbot Juliana em atendimento" },
         { label: "Cursos vendidos", value: metrics.soldCourses.toString(), variation: "Leads matriculados" }
       ],
       charts: {

@@ -16,7 +16,7 @@ export default async function ConversasPage({
   return (
     <PageShell
       title="Central de conversas"
-      description="Inbox operacional semelhante ao WhatsApp Web, com filtros, historico persistente, atribuicao de operador e suporte para IA em tempo real."
+      description="Inbox operacional semelhante ao WhatsApp Web, com filtros, historico persistente, atribuicao de operador e suporte ao Chatbot Juliana."
     >
       <ConversationWorkspace initialItems={items} initialDetail={detail} />
     </PageShell>

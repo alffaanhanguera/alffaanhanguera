@@ -9,8 +9,8 @@ export default async function FAQPage() {
     <PageShell title="FAQ" description="Base institucional para respostas frequentes sobre MEC, diploma, provas, portal, TCC, estagio e documentos.">
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
-          <h2 className="text-lg font-semibold">Regras e respostas para a IA</h2>
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">Aqui ficam as perguntas que a IA deve consultar antes de responder o aluno.</p>
+          <h2 className="text-lg font-semibold">Regras e respostas para o Chatbot Juliana</h2>
+          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">Aqui ficam as perguntas que o Chatbot Juliana deve consultar antes de responder o aluno.</p>
 
           <div className="mt-6 space-y-4">
             {data.faqItems.map((item) => (

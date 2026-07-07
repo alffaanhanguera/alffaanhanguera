@@ -24,7 +24,7 @@ export function ConversationList({
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge tone="blue">Todos</Badge>
-          <Badge>IA ativa</Badge>
+          <Badge>Chatbot ativo</Badge>
           <Badge>Sem resposta</Badge>
           <Badge tone="orange">Transferidos</Badge>
         </div>

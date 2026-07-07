@@ -8,7 +8,7 @@ export default async function DashboardPage() {
   const data = await new DashboardService().getSummary();
 
   return (
-    <PageShell title="Dashboard comercial" description="Visao executiva do funil, operacao do WhatsApp, performance da IA e produtividade dos operadores.">
+    <PageShell title="Dashboard comercial" description="Visao executiva do funil, operacao do WhatsApp, performance do Chatbot Juliana e produtividade dos operadores.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
