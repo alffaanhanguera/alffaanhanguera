@@ -18,13 +18,10 @@ export function ConversationWorkspace({ initialItems, initialDetail }: Conversat
 
   async function refreshWorkspace(selectedConversationId?: string) {
     const conversationId = selectedConversationId ?? detail?.id ?? items[0]?.id;
-
-    if (!conversationId) {
-      return;
-    }
+    const url = conversationId ? `/api/conversations?conversationId=${conversationId}` : "/api/conversations";
 
     try {
-      const response = await fetch(`/api/conversations?conversationId=${conversationId}`, {
+      const response = await fetch(url, {
         cache: "no-store"
       });
 

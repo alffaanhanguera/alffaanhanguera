@@ -32,6 +32,15 @@ export function ConversationList({
 
       <ScrollArea className="h-[calc(100vh-19rem)] md:h-[calc(100vh-20rem)] xl:h-[calc(100vh-19rem)]">
         <div className="space-y-2 p-3">
+          {items.length === 0 ? (
+            <div className="flex min-h-[260px] items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50/80 px-6 text-center">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Aguardando novas conversas</p>
+                <p className="mt-2 text-sm text-slate-500">Assim que chegar uma mensagem no WhatsApp, ela vai aparecer aqui.</p>
+              </div>
+            </div>
+          ) : null}
+
           {items.map((item) => (
             <button
               key={item.id}

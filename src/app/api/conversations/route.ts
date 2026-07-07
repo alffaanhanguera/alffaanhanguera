@@ -7,11 +7,6 @@ export async function GET(request: Request) {
   const conversationId = searchParams.get("conversationId") ?? undefined;
   const service = new ConversationService();
   const items = await service.listForInbox();
-
-  if (!conversationId) {
-    return apiSuccess(items);
-  }
-
   const detail = await service.getConversationDetail(conversationId);
   return apiSuccess({
     items,

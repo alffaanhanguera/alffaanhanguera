@@ -15,30 +15,7 @@ export class ConversationService {
     const items = await this.repository.list();
 
     if (items.length === 0) {
-      return [
-        {
-          id: "mock-1",
-          name: "Maria Silva Santos",
-          avatar: "",
-          lastMessage: "Quero saber sobre Administracao EAD.",
-          time: "09:14",
-          unreadCount: 3,
-          status: "OPEN",
-          operator: "Fila IA",
-          tags: ["ead", "enem"]
-        },
-        {
-          id: "mock-2",
-          name: "Lucas Pereira",
-          avatar: "",
-          lastMessage: "Tenho interesse em Direito presencial.",
-          time: "08:50",
-          unreadCount: 1,
-          status: "TRANSFERRED",
-          operator: "Juliana Rocha",
-          tags: ["presencial"]
-        }
-      ];
+      return [];
     }
 
     return items.map((conversation) => ({
@@ -58,7 +35,9 @@ export class ConversationService {
 
   async getConversationDetail(conversationId?: string): Promise<ConversationDetail | null> {
     const inbox = await this.repository.list();
-    const target = conversationId ? await this.repository.getById(conversationId) : inbox[0] ? await this.repository.getById(inbox[0].id) : null;
+    const target =
+      (conversationId ? await this.repository.getById(conversationId) : null) ??
+      (inbox[0] ? await this.repository.getById(inbox[0].id) : null);
 
     if (!target) {
       return null;
