@@ -4,7 +4,7 @@ import { hash } from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await hash("Admin@123", 12);
+  const passwordHash = await hash("acesso@2026", 12);
 
   await prisma.permission.createMany({
     data: [
@@ -16,17 +16,32 @@ async function main() {
     skipDuplicates: true
   });
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@alffaeducacao.com" },
-    update: {},
-    create: {
-      name: "Administrador",
-      email: "admin@alffaeducacao.com",
-      passwordHash,
-      role: UserRole.ADMIN,
-      status: UserStatus.ACTIVE
+  const existingAdmin = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: "admin@alffaeducacao.com" }, { email: "admin@alffaeducacao.com.br" }]
     }
   });
+
+  const admin = existingAdmin
+    ? await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: {
+          name: "Administrador",
+          email: "admin@alffaeducacao.com.br",
+          passwordHash,
+          role: UserRole.ADMIN,
+          status: UserStatus.ACTIVE
+        }
+      })
+    : await prisma.user.create({
+        data: {
+          name: "Administrador",
+          email: "admin@alffaeducacao.com.br",
+          passwordHash,
+          role: UserRole.ADMIN,
+          status: UserStatus.ACTIVE
+        }
+      });
 
   const permissions = await prisma.permission.findMany();
 
@@ -86,7 +101,7 @@ async function main() {
     create: {
       id: "default_ai_setting",
       organizationName: "Alffa Educacao",
-      assistantName: "Joao",
+      assistantName: "Juliana",
       systemPrompt: "Atue como consultor comercial da Anhanguera. Nunca invente respostas, sempre consulte a base e faca uma pergunta por vez.",
       transferPrompt: "Transfira para operador quando houver modalidade presencial, semipresencial, aceite EAD ou necessidade manual."
     }

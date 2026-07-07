@@ -13,6 +13,14 @@ export const getCurrentSession = cache(async () => {
 
   try {
     const payload = await verifyAccessToken(token);
+    const session = await prisma.session.findUnique({
+      where: { id: payload.sessionId }
+    });
+
+    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+      return null;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
       include: {

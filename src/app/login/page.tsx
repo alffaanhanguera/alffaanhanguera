@@ -19,13 +19,13 @@ export default function LoginPage() {
               <div className="flex items-center gap-4">
                 <Image src={siteConfig.logoPath} alt="ALFFA Educação" width={82} height={82} className="rounded-full" />
                 <div>
-                  <p className="text-sm uppercase tracking-[0.32em] text-blue-200">CRM IA WhatsApp</p>
-                  <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Uma tela simples para entrar e operar tudo.</h1>
+                  <p className="text-sm uppercase tracking-[0.32em] text-blue-200">Sistema Alffa Educa</p>
+                  <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Gerenciamento em tempo real.</h1>
                 </div>
               </div>
 
               <p className="mt-8 max-w-xl text-base leading-8 text-slate-200 sm:text-lg">
-                Atendimento comercial com operadores, IA, WhatsApp e funil completo de matricula em uma operacao unica, leve e responsiva.
+                Atendimento comercial com operadores, chatbot, WhatsApp e funil completo de matricula em uma operacao unica, leve e responsiva.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -49,8 +49,8 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
               <div className="mb-8 text-center">
                 <Image src={siteConfig.logoPath} alt="ALFFA Educação" width={90} height={90} className="mx-auto rounded-full" />
-                <h2 className="mt-4 text-3xl font-semibold">Entrar no CRM</h2>
-                <p className="mt-2 text-sm text-slate-300">Login unico, simples, responsivo e otimizado para toda a operacao.</p>
+                <h2 className="mt-4 text-3xl font-semibold">Entrar no sistema</h2>
+                <p className="mt-2 text-sm text-slate-300">Faça o login para acessar o painel administrativo</p>
               </div>
               <LoginForm />
             </div>

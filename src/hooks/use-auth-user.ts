@@ -16,7 +16,7 @@ export function useAuthUser() {
     setUser({
       id: "seed-admin",
       name: "Administrador",
-      email: "admin@alffaeducacao.com",
+      email: "admin@alffaeducacao.com.br",
       role: "ADMIN"
     });
   }, []);

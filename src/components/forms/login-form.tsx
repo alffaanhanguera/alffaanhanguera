@@ -19,11 +19,7 @@ type LoginSchema = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const form = useForm<LoginSchema>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "admin@alffaeducacao.com",
-      password: "Admin@123"
-    }
+    resolver: zodResolver(loginSchema)
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -51,16 +47,30 @@ export function LoginForm() {
         <Label htmlFor="email" className="text-slate-600 dark:text-slate-300">
           E-mail
         </Label>
-        <Input id="email" type="email" className="h-12" {...form.register("email")} />
+        <Input
+          id="email"
+          type="email"
+          className="h-12"
+          autoComplete="username"
+          placeholder="admin@alffaeducacao.com.br"
+          {...form.register("email")}
+        />
       </div>
       <div>
         <Label htmlFor="password" className="text-slate-600 dark:text-slate-300">
           Senha
         </Label>
-        <Input id="password" type="password" className="h-12" {...form.register("password")} />
+        <Input
+          id="password"
+          type="password"
+          className="h-12"
+          autoComplete="current-password"
+          placeholder="Digite sua senha"
+          {...form.register("password")}
+        />
       </div>
       <Button className="h-12 w-full text-base" type="submit" disabled={form.formState.isSubmitting}>
-        Entrar no CRM
+        Entrar
       </Button>
     </form>
   );

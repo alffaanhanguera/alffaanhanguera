@@ -43,7 +43,7 @@ export class OperatorService {
           {
             id: "mock-admin",
             name: "Administrador",
-            email: "admin@alffaeducacao.com",
+            email: "admin@alffaeducacao.com.br",
             role: "Administrador",
             status: "Ativo",
             conversations: 6,
