@@ -5,8 +5,23 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { siteConfig } from "@/config/site";
+import { getCurrentSession } from "@/lib/auth/session";
 
-export function AppHeader() {
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "AD";
+}
+
+export async function AppHeader() {
+  const session = await getCurrentSession();
+  const userName = session?.user.name ?? "Administrador";
+  const userRole =
+    session?.user.role === "ADMIN"
+      ? "Controle total da operacao"
+      : session?.user.role === "SUPERVISOR"
+        ? "Supervisao comercial"
+        : "Operacao de atendimento";
+
   return (
     <header className="glass-panel flex items-center justify-between gap-4 px-4 py-3">
       <div className="flex items-center gap-3 lg:hidden">
@@ -31,10 +46,10 @@ export function AppHeader() {
           <Bell className="h-4 w-4" />
         </button>
         <div className="hidden text-right md:block">
-          <p className="text-sm font-semibold">Administrador</p>
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">Controle total da operacao</p>
+          <p className="text-sm font-semibold">{userName}</p>
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">{userRole}</p>
         </div>
-        <Avatar fallback="AD" />
+        <Avatar fallback={getInitials(userName)} />
       </div>
     </header>
   );

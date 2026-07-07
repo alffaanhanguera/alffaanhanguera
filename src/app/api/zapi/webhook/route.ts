@@ -91,6 +91,20 @@ function normalizePhone(...values: unknown[]) {
   return digits || undefined;
 }
 
+function normalizePhoneCandidate(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+
+  if (normalized.toLowerCase().includes("group")) {
+    return undefined;
+  }
+
+  return normalizePhone(normalized);
+}
+
 function isBrazilPhone(value: string | undefined) {
   if (!value) {
     return false;
@@ -100,7 +114,7 @@ function isBrazilPhone(value: string | undefined) {
 }
 
 function pickPhone(...values: unknown[]) {
-  const candidates = values.map((value) => normalizePhone(value)).filter((value): value is string => Boolean(value));
+  const candidates = values.map((value) => normalizePhoneCandidate(value)).filter((value): value is string => Boolean(value));
   const brazilPhone = candidates.find((value) => isBrazilPhone(value));
 
   return brazilPhone ?? candidates[0];
@@ -139,31 +153,25 @@ function extractNestedPhone(body: Record<string, unknown>) {
 
   return pickPhone(
     body.phone,
+    body.participantPhone,
     body.from,
+    body.sender,
     body.senderPhone,
     contactNode.phone,
     contactNode.wa_id,
+    body.connectedPhone,
     senderNode.phone,
     visitorNode.phone,
     dataNode.phone,
     dataNode.from,
+    dataNode.sender,
+    dataNode.participantPhone,
     messageNode.phone,
     messageNode.from,
     dataMessageNode.phone,
     dataMessageNode.from,
     firstMessage.phone,
-    firstMessage.from,
-    body.remoteJid,
-    dataNode.remoteJid,
-    body.chatId,
-    dataNode.chatId,
-    messageNode.chatId,
-    dataMessageNode.chatId,
-    dataNode.phone,
-    senderNode.id,
-    chatNode.id,
-    visitorNode.id,
-    chatNode.phone
+    firstMessage.from
   );
 }
 
@@ -171,8 +179,6 @@ function extractWebhookMessage(body: Record<string, unknown>) {
   const messageNode = asRecord(body.message);
   const dataNode = asRecord(body.data);
   const dataMessageNode = asRecord(dataNode.message);
-  const senderNode = asRecord(body.sender);
-  const chatNode = asRecord(body.chat);
   const messages = asArray(body.messages);
   const firstMessage = asRecord(messages[0]);
   const dataTextNode = asRecord(dataNode.text);
@@ -196,8 +202,6 @@ function extractWebhookMessage(body: Record<string, unknown>) {
     dataMessageTextNode.text,
     extendedTextNode.text,
     extendedTextNode.message,
-    senderNode.name,
-    chatNode.subject,
     firstMessage.conversation
   );
 
@@ -226,6 +230,14 @@ function shouldIgnoreWebhook(body: Record<string, unknown>) {
   const messageNode = asRecord(body.message);
   const dataMessageNode = asRecord(dataNode.message);
   const firstMessage = asRecord(asArray(body.messages)[0]);
+  const callbackType = firstString(
+    body.type,
+    dataNode.type,
+    messageNode.type,
+    dataMessageNode.type,
+    body.event,
+    dataNode.event
+  );
   const isGroup = firstBoolean(
     body.isGroup,
     dataNode.isGroup,
@@ -264,28 +276,10 @@ function shouldIgnoreWebhook(body: Record<string, unknown>) {
     };
   }
 
-  const event = firstString(
-    body.type,
-    body.event,
-    body.messageType,
-    body.eventType,
-    dataNode.type,
-    dataNode.event,
-    messageNode.type,
-    dataMessageNode.type
-  )?.toLowerCase();
-
-  if (
-    event &&
-    (event.includes("sent") ||
-      event.includes("status") ||
-      event.includes("delivery") ||
-      event.includes("ack") ||
-      event.includes("callback"))
-  ) {
+  if (callbackType && callbackType !== "ReceivedCallback") {
     return {
       ignored: true,
-      reason: "status_event"
+      reason: "non_received_callback"
     };
   }
 
@@ -297,7 +291,7 @@ function shouldIgnoreWebhook(body: Record<string, unknown>) {
     firstMessage.status
   )?.toLowerCase();
 
-  if (status && status !== "received") {
+  if (status && status !== "received" && status !== "message") {
     return {
       ignored: true,
       reason: "non_received_status"

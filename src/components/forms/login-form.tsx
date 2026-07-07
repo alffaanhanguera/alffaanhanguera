@@ -42,7 +42,7 @@ export function LoginForm() {
   });
 
   return (
-    <form className="space-y-5" onSubmit={onSubmit}>
+    <form className="space-y-5" onSubmit={onSubmit} autoComplete="off">
       <div>
         <Label htmlFor="email" className="text-slate-600 dark:text-slate-300">
           E-mail
@@ -51,7 +51,7 @@ export function LoginForm() {
           id="email"
           type="email"
           className="h-12"
-          autoComplete="username"
+          autoComplete="off"
           placeholder="admin@alffaeducacao.com.br"
           {...form.register("email")}
         />
@@ -64,7 +64,7 @@ export function LoginForm() {
           id="password"
           type="password"
           className="h-12"
-          autoComplete="current-password"
+          autoComplete="new-password"
           placeholder="Digite sua senha"
           {...form.register("password")}
         />
