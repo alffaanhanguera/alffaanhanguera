@@ -226,6 +226,20 @@ function shouldIgnoreWebhook(body: Record<string, unknown>) {
   const messageNode = asRecord(body.message);
   const dataMessageNode = asRecord(dataNode.message);
   const firstMessage = asRecord(asArray(body.messages)[0]);
+  const isGroup = firstBoolean(
+    body.isGroup,
+    dataNode.isGroup,
+    messageNode.isGroup,
+    dataMessageNode.isGroup,
+    firstMessage.isGroup
+  );
+
+  if (isGroup === true) {
+    return {
+      ignored: true,
+      reason: "group_message"
+    };
+  }
 
   const fromMe = firstBoolean(
     body.fromMe,
@@ -261,10 +275,32 @@ function shouldIgnoreWebhook(body: Record<string, unknown>) {
     dataMessageNode.type
   )?.toLowerCase();
 
-  if (event && (event.includes("sent") || event.includes("status") || event.includes("delivery") || event.includes("ack"))) {
+  if (
+    event &&
+    (event.includes("sent") ||
+      event.includes("status") ||
+      event.includes("delivery") ||
+      event.includes("ack") ||
+      event.includes("callback"))
+  ) {
     return {
       ignored: true,
       reason: "status_event"
+    };
+  }
+
+  const status = firstString(
+    body.status,
+    dataNode.status,
+    messageNode.status,
+    dataMessageNode.status,
+    firstMessage.status
+  )?.toLowerCase();
+
+  if (status && status !== "received") {
+    return {
+      ignored: true,
+      reason: "non_received_status"
     };
   }
 
