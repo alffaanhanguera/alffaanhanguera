@@ -10,6 +10,44 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function pickRecordStrings(node: Record<string, unknown>) {
+  const textNode = asRecord(node.text);
+  const bodyNode = asRecord(node.body);
+  const messageNode = asRecord(node.message);
+  const contentNode = asRecord(node.content);
+  const selectedOptionNode = asRecord(node.selectedOption);
+  const selectedButtonNode = asRecord(node.selectedButton);
+
+  return [
+    node.message,
+    node.text,
+    node.body,
+    node.caption,
+    node.content,
+    node.conversation,
+    node.description,
+    node.title,
+    node.selectedDisplayText,
+    node.selectedText,
+    node.optionText,
+    node.buttonText,
+    textNode.message,
+    textNode.text,
+    textNode.body,
+    bodyNode.message,
+    bodyNode.text,
+    messageNode.conversation,
+    messageNode.extendedTextMessage,
+    messageNode.selectedDisplayText,
+    contentNode.text,
+    contentNode.body,
+    selectedOptionNode.text,
+    selectedOptionNode.title,
+    selectedButtonNode.text,
+    selectedButtonNode.title
+  ];
+}
+
 function firstString(...values: unknown[]) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
@@ -130,34 +168,37 @@ function extractNestedPhone(body: Record<string, unknown>) {
 }
 
 function extractWebhookMessage(body: Record<string, unknown>) {
-  const textNode = asRecord(body.text);
   const messageNode = asRecord(body.message);
   const dataNode = asRecord(body.data);
   const dataMessageNode = asRecord(dataNode.message);
-  const extendedTextNode = asRecord(body.messageText);
   const senderNode = asRecord(body.sender);
   const chatNode = asRecord(body.chat);
   const messages = asArray(body.messages);
   const firstMessage = asRecord(messages[0]);
+  const dataTextNode = asRecord(dataNode.text);
+  const messageTextNode = asRecord(messageNode.text);
+  const dataMessageTextNode = asRecord(dataMessageNode.text);
+  const extendedTextNode = asRecord(body.messageText);
 
   const phone = extractNestedPhone(body);
 
   const text = firstString(
-    textNode.message,
-    body.text,
-    messageNode.text,
-    dataNode.text,
-    dataMessageNode.text,
-    dataMessageNode.body,
+    ...pickRecordStrings(body),
+    ...pickRecordStrings(dataNode),
+    ...pickRecordStrings(messageNode),
+    ...pickRecordStrings(dataMessageNode),
+    ...pickRecordStrings(firstMessage),
+    dataTextNode.message,
+    dataTextNode.text,
+    messageTextNode.message,
+    messageTextNode.text,
+    dataMessageTextNode.message,
+    dataMessageTextNode.text,
     extendedTextNode.text,
-    body.body,
-    body.caption,
-    messageNode.body,
-    dataNode.body,
+    extendedTextNode.message,
     senderNode.name,
     chatNode.subject,
-    firstMessage.text,
-    firstMessage.body
+    firstMessage.conversation
   );
 
   const messageId = firstString(
