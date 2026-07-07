@@ -34,7 +34,7 @@ export function ConversationPanel({
             <p className="font-semibold text-slate-900">{conversation.leadName}</p>
             <div className="mt-1 flex items-center gap-2">
               <span className={`status-dot ${conversation.aiEnabled ? "bg-emerald-500" : "bg-orange-500"}`} />
-              <p className="text-xs text-slate-500">{conversation.aiEnabled ? "IA ativa" : "Em fila humana"} · {conversation.phone}</p>
+              <p className="text-xs text-slate-500">{conversation.aiEnabled ? "Fluxo do chatbot ativo" : "Em fila humana"} · {conversation.phone}</p>
             </div>
           </div>
         </div>

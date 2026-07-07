@@ -31,31 +31,32 @@ export class ZapiWebhookService {
     if (!conversation || !conversation.aiEnabled) {
       return {
         stored: true,
-        replied: false
+        replied: false,
+        automation: "crm-only"
       };
     }
 
-    const aiReply = await this.commercialFlow.generateReply({
+    const chatbotReply = await this.commercialFlow.generateReply({
       phone: input.phone,
       latestMessage: input.text
     });
 
     await this.conversations.createOutboundAiMessage({
       conversationId: conversation.id,
-      content: aiReply.answer,
+      content: chatbotReply.answer,
       metadata: {
-        source: "commercial-flow",
-        shouldTransfer: aiReply.shouldTransfer
+        source: "chatbot-flow",
+        shouldTransfer: chatbotReply.shouldTransfer
       }
     });
 
-    const delivery = await this.zapi.sendTextMessage(input.phone, aiReply.answer);
+    const delivery = await this.zapi.sendTextMessage(input.phone, chatbotReply.answer);
 
     await this.integrationLogs.create({
       provider: "z-api",
-      endpoint: "webhook-reply",
+      endpoint: "chatbot-flow-reply",
       statusCode: delivery.status,
-      message: delivery.delivered ? "Resposta automatica enviada." : "Falha ao enviar resposta automatica.",
+      message: delivery.delivered ? "Resposta automatica do fluxo enviada." : "Falha ao enviar resposta automatica do fluxo.",
       payload: {
         phone: input.phone,
         conversationId: conversation.id,
@@ -67,7 +68,8 @@ export class ZapiWebhookService {
     return {
       stored: true,
       replied: delivery.delivered,
-      shouldTransfer: aiReply.shouldTransfer
+      shouldTransfer: chatbotReply.shouldTransfer,
+      automation: "chatbot-flow"
     };
   }
 }
