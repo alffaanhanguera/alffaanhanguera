@@ -56,7 +56,7 @@ export function ConversationWorkspace({ initialItems, initialDetail }: Conversat
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+    <div className="grid min-h-0 gap-4 xl:grid-cols-[380px_minmax(0,1fr)] 2xl:grid-cols-[420px_minmax(0,1fr)]">
       <ConversationList items={items} selectedId={detail?.id} onSelectConversation={handleSelectConversation} />
       <ConversationPanel conversation={detail} onRefresh={() => refreshWorkspace()} />
     </div>

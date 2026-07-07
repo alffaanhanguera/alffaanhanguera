@@ -16,7 +16,7 @@ export function ConversationPanel({
 }) {
   if (!conversation) {
     return (
-      <Card className="flex h-[780px] items-center justify-center p-10 text-center">
+      <Card className="flex h-[calc(100vh-14rem)] items-center justify-center p-10 text-center md:h-[calc(100vh-15rem)] xl:h-[calc(100vh-13.5rem)]">
         <div>
           <p className="text-lg font-semibold text-slate-900">Nenhuma conversa selecionada</p>
           <p className="mt-2 text-sm text-slate-500">Assim que um lead interagir pelo WhatsApp, o historico aparecera aqui.</p>
@@ -26,8 +26,8 @@ export function ConversationPanel({
   }
 
   return (
-    <Card className="flex h-[780px] flex-col overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b px-5 py-4">
+    <Card className="flex h-[calc(100vh-14rem)] flex-col overflow-hidden p-0 md:h-[calc(100vh-15rem)] xl:h-[calc(100vh-13.5rem)]">
+      <div className="flex flex-col gap-4 border-b px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <Avatar fallback={conversation.leadName.slice(0, 2).toUpperCase()} />
           <div>
@@ -39,7 +39,7 @@ export function ConversationPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge tone="orange">{conversation.modality}</Badge>
           <Badge tone="green">Operador: {conversation.operator}</Badge>
           <Button variant="outline" size="sm">
@@ -55,12 +55,12 @@ export function ConversationPanel({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(228,236,246,0.9))] px-5 py-6">
+      <ScrollArea className="min-h-0 flex-1 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(228,236,246,0.9))] px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-4">
           {conversation.messages.map((message) => (
             <div key={message.id} className={`flex ${message.inbound ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[80%] rounded-[24px] px-4 py-3 text-sm shadow-sm ${
+                className={`max-w-[92%] rounded-[24px] px-4 py-3 text-sm shadow-sm sm:max-w-[80%] ${
                   message.inbound ? "bg-white text-slate-900" : "bg-blue-900 text-white"
                 }`}
               >
@@ -72,7 +72,7 @@ export function ConversationPanel({
         </div>
       </ScrollArea>
 
-      <div className="border-t bg-white px-5 py-4">
+      <div className="border-t bg-white px-4 py-4 sm:px-5">
         <div className="mb-3 flex flex-wrap gap-2">
           <Badge tone="blue">{conversation.status}</Badge>
           <Badge tone="slate">Turno: {conversation.shift}</Badge>

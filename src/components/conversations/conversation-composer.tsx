@@ -116,26 +116,33 @@ export function ConversationComposer({
         }}
       />
 
-      <div className="flex items-end gap-2">
-      <Button variant="ghost" size="sm" type="button">
-        <Smile className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" type="button" onClick={() => fileInputRef.current?.click()}>
-        <Paperclip className="h-4 w-4" />
-      </Button>
-      <Button variant="ghost" size="sm" type="button" onClick={() => fileInputRef.current?.click()}>
-        <Mic className="h-4 w-4" />
-      </Button>
-      <Textarea
-        className="min-h-[52px] resize-none rounded-[24px]"
-        placeholder={selectedFile ? "Digite uma legenda opcional..." : "Responder, enviar audio, anexos ou assumir a conversa..."}
-        value={content}
-        onChange={(event) => setContent(event.target.value)}
-      />
-      <Button variant="secondary" type="submit" disabled={isSending || (!content.trim() && !selectedFile)}>
-        <SendHorizontal className="mr-2 h-4 w-4" />
-        {isSending ? "Enviando" : "Enviar"}
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" type="button">
+            <Smile className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" type="button" onClick={() => fileInputRef.current?.click()}>
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" type="button" onClick={() => fileInputRef.current?.click()}>
+            <Mic className="h-4 w-4" />
+          </Button>
+        </div>
+        <Textarea
+          className="min-h-[52px] flex-1 resize-none rounded-[24px]"
+          placeholder={selectedFile ? "Digite uma legenda opcional..." : "Responder, enviar audio, anexos ou assumir a conversa..."}
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+        />
+        <Button
+          variant="secondary"
+          type="submit"
+          className="w-full sm:w-auto"
+          disabled={isSending || (!content.trim() && !selectedFile)}
+        >
+          <SendHorizontal className="mr-2 h-4 w-4" />
+          {isSending ? "Enviando" : "Enviar"}
+        </Button>
       </div>
     </form>
   );

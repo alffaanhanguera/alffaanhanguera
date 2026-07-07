@@ -16,7 +16,7 @@ export function ConversationList({
   onSelectConversation?: (conversationId: string) => void;
 }) {
   return (
-    <Card className="p-0">
+    <Card className="min-h-0 overflow-hidden p-0 h-[calc(100vh-14rem)] md:h-[calc(100vh-15rem)] xl:h-[calc(100vh-13.5rem)]">
       <div className="border-b p-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -30,7 +30,7 @@ export function ConversationList({
         </div>
       </div>
 
-      <ScrollArea className="h-[680px]">
+      <ScrollArea className="h-[calc(100vh-19rem)] md:h-[calc(100vh-20rem)] xl:h-[calc(100vh-19rem)]">
         <div className="space-y-2 p-3">
           {items.map((item) => (
             <button
