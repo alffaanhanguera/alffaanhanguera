@@ -11,6 +11,28 @@ function normalizeText(value: string) {
 }
 
 export class CourseRepository {
+  async listCatalog() {
+    if (!isDatabaseConfigured()) {
+      return [];
+    }
+
+    try {
+      return await prisma.course.findMany({
+        include: {
+          offers: {
+            where: { active: true },
+            orderBy: { createdAt: "desc" },
+            take: 1
+          }
+        },
+        orderBy: { name: "asc" },
+        take: 12
+      });
+    } catch {
+      return [];
+    }
+  }
+
   async findByMessage(message: string) {
     if (!isDatabaseConfigured()) {
       return null;

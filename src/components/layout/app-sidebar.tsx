@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, Brain, Building2, CircleHelp, Cog, LayoutDashboard, Logs, MessageCircleMore, Network, Shield, UserCircle2, UserCog, Users } from "lucide-react";
+import { CircleHelp, Cog, LayoutDashboard, MessageCircleMore, Network, UserCog, Users } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
@@ -13,36 +13,19 @@ const iconMap = {
   MessageCircleMore,
   Users,
   UserCog,
-  Brain,
-  BookOpen,
-  BarChart3,
   CircleHelp,
-  Building2,
   Cog,
-  Network,
-  Shield,
-  Logs,
-  UserCircle2
+  Network
 };
 
 const items: Array<{ label: string; href: Route; icon: string }> = [
   { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
   { label: "Conversas", href: "/conversas", icon: "MessageCircleMore" },
   { label: "Leads", href: "/leads", icon: "Users" },
-  { label: "Operadores", href: "/operadores", icon: "UserCog" },
-  { label: "IA", href: "/ia", icon: "Brain" },
   { label: "N8N", href: "/n8n", icon: "Network" },
-  { label: "Cursos", href: "/cursos", icon: "BookOpen" },
-  { label: "Ofertas EAD", href: "/ofertas-ead", icon: "BarChart3" },
-  { label: "Beneficios", href: "/beneficios", icon: "Shield" },
   { label: "FAQ", href: "/faq", icon: "CircleHelp" },
-  { label: "Empresas", href: "/empresas-conveniadas", icon: "Building2" },
-  { label: "Configuracoes", href: "/configuracoes", icon: "Cog" },
-  { label: "Usuarios", href: "/usuarios", icon: "Users" },
-  { label: "Permissoes", href: "/permissoes", icon: "Shield" },
-  { label: "Logs", href: "/logs", icon: "Logs" },
-  { label: "Auditoria", href: "/auditoria", icon: "Shield" },
-  { label: "Perfil", href: "/perfil", icon: "UserCircle2" }
+  { label: "Operadores", href: "/operadores", icon: "UserCog" },
+  { label: "Configuracoes", href: "/configuracoes", icon: "Cog" }
 ];
 
 export function AppSidebar() {

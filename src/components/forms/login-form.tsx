@@ -48,14 +48,18 @@ export function LoginForm() {
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
       <div>
-        <Label htmlFor="email">E-mail</Label>
-        <Input id="email" type="email" {...form.register("email")} />
+        <Label htmlFor="email" className="text-slate-600 dark:text-slate-300">
+          E-mail
+        </Label>
+        <Input id="email" type="email" className="h-12" {...form.register("email")} />
       </div>
       <div>
-        <Label htmlFor="password">Senha</Label>
-        <Input id="password" type="password" {...form.register("password")} />
+        <Label htmlFor="password" className="text-slate-600 dark:text-slate-300">
+          Senha
+        </Label>
+        <Input id="password" type="password" className="h-12" {...form.register("password")} />
       </div>
-      <Button className="w-full" type="submit" disabled={form.formState.isSubmitting}>
+      <Button className="h-12 w-full text-base" type="submit" disabled={form.formState.isSubmitting}>
         Entrar no CRM
       </Button>
     </form>

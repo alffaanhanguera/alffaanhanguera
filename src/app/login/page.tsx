@@ -24,20 +24,20 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <p className="mt-8 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+              <p className="mt-8 max-w-xl text-base leading-8 text-slate-200 sm:text-lg">
                 Atendimento comercial com operadores, IA, WhatsApp e funil completo de matricula em uma operacao unica, leve e responsiva.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                <div className="rounded-[24px] border border-white/15 bg-white/8 p-4">
                   <Sparkles className="h-5 w-5 text-blue-200" />
                   <p className="mt-3 text-sm font-semibold">Fluxo inteligente</p>
                 </div>
-                <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                <div className="rounded-[24px] border border-white/15 bg-white/8 p-4">
                   <Zap className="h-5 w-5 text-orange-300" />
                   <p className="mt-3 text-sm font-semibold">WhatsApp ativo</p>
                 </div>
-                <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                <div className="rounded-[24px] border border-white/15 bg-white/8 p-4">
                   <BadgeCheck className="h-5 w-5 text-emerald-300" />
                   <p className="mt-3 text-sm font-semibold">Acesso seguro</p>
                 </div>
@@ -45,12 +45,12 @@ export default function LoginPage() {
             </div>
           </section>
 
-          <section className="flex items-center justify-center px-5 py-8 sm:px-8 sm:py-10">
+          <section className="flex items-center justify-center bg-slate-800/90 px-5 py-8 text-white sm:px-8 sm:py-10">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center">
                 <Image src={siteConfig.logoPath} alt="ALFFA Educação" width={90} height={90} className="mx-auto rounded-full" />
                 <h2 className="mt-4 text-3xl font-semibold">Entrar no CRM</h2>
-                <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">Login unico, simples, responsivo e otimizado para toda a operacao.</p>
+                <p className="mt-2 text-sm text-slate-300">Login unico, simples, responsivo e otimizado para toda a operacao.</p>
               </div>
               <LoginForm />
             </div>
