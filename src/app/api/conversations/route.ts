@@ -2,9 +2,21 @@ import { apiError, apiSuccess } from "@/lib/http/api-response";
 import { sendConversationMessageDto } from "@/server/dtos/conversation/send-message-dto";
 import { ConversationService } from "@/server/services/conversation-service";
 
-export async function GET() {
-  const items = await new ConversationService().listForInbox();
-  return apiSuccess(items);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const conversationId = searchParams.get("conversationId") ?? undefined;
+  const service = new ConversationService();
+  const items = await service.listForInbox();
+
+  if (!conversationId) {
+    return apiSuccess(items);
+  }
+
+  const detail = await service.getConversationDetail(conversationId);
+  return apiSuccess({
+    items,
+    detail
+  });
 }
 
 export async function POST(request: Request) {

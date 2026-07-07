@@ -168,6 +168,8 @@ export class ConversationRepository {
   async createOutboundManualMessage(params: {
     conversationId: string;
     content: string;
+    type?: "TEXT" | "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "PDF" | "LOCATION";
+    mediaUrl?: string;
     metadata?: Record<string, unknown>;
   }) {
     if (!isDatabaseConfigured()) {
@@ -191,8 +193,9 @@ export class ConversationRepository {
       data: {
         conversationId: params.conversationId,
         direction: "OUTBOUND",
-        type: "TEXT",
+        type: params.type ?? "TEXT",
         content: params.content,
+        mediaUrl: params.mediaUrl,
         metadata: params.metadata as Prisma.InputJsonValue | undefined
       }
     });

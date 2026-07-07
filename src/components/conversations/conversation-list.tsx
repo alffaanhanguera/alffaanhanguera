@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +8,12 @@ import type { ConversationListItem } from "@/types/domain";
 
 export function ConversationList({
   items,
-  selectedId
+  selectedId,
+  onSelectConversation
 }: {
   items: ConversationListItem[];
   selectedId?: string;
+  onSelectConversation?: (conversationId: string) => void;
 }) {
   return (
     <Card className="p-0">
@@ -32,9 +33,10 @@ export function ConversationList({
       <ScrollArea className="h-[680px]">
         <div className="space-y-2 p-3">
           {items.map((item) => (
-            <Link
+            <button
               key={item.id}
-              href={`/conversas?conversation=${item.id}`}
+              type="button"
+              onClick={() => onSelectConversation?.(item.id)}
               className={`flex w-full items-start gap-3 rounded-[24px] border px-3 py-3 text-left transition hover:border-slate-200 hover:bg-slate-50 ${
                 selectedId === item.id ? "border-blue-200 bg-blue-50/60" : "border-transparent"
               }`}
@@ -61,7 +63,7 @@ export function ConversationList({
                   {item.unreadCount}
                 </span>
               ) : null}
-            </Link>
+            </button>
           ))}
         </div>
       </ScrollArea>

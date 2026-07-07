@@ -143,4 +143,88 @@ export class ConversationService {
       messageId: storedMessage.id
     };
   }
+
+  async sendManualMediaReply(params: {
+    conversationId: string;
+    fileName: string;
+    mimeType: string;
+    dataUrl: string;
+    caption?: string;
+  }) {
+    const conversation = await this.repository.getById(params.conversationId);
+
+    if (!conversation) {
+      throw new Error("Conversa nao encontrada.");
+    }
+
+    const messageType = params.mimeType.startsWith("image/")
+      ? "IMAGE"
+      : params.mimeType.startsWith("audio/")
+        ? "AUDIO"
+        : params.mimeType.startsWith("video/")
+          ? "VIDEO"
+          : params.mimeType.includes("pdf")
+            ? "PDF"
+            : "DOCUMENT";
+
+    const delivery =
+      messageType === "IMAGE"
+        ? await this.zapi.sendImageMessage(conversation.lead.phone, params.dataUrl, params.caption)
+        : messageType === "AUDIO"
+          ? await this.zapi.sendAudioMessage(conversation.lead.phone, params.dataUrl)
+          : messageType === "VIDEO"
+            ? await this.zapi.sendVideoMessage(conversation.lead.phone, params.dataUrl, params.caption)
+            : await this.zapi.sendDocumentMessage(conversation.lead.phone, params.dataUrl, params.fileName, params.caption);
+
+    if (!delivery.delivered) {
+      await this.integrationLogs.create({
+        provider: "z-api",
+        endpoint: "manual-media-reply",
+        statusCode: delivery.status,
+        message: "Falha ao enviar midia manual para o WhatsApp.",
+        payload: {
+          conversationId: conversation.id,
+          phone: conversation.lead.phone,
+          fileName: params.fileName,
+          mimeType: params.mimeType
+        },
+        response: delivery
+      });
+
+      throw new Error("A Z-API nao confirmou o envio da midia.");
+    }
+
+    const storedMessage = await this.repository.createOutboundManualMessage({
+      conversationId: conversation.id,
+      content: params.caption?.trim() || params.fileName,
+      type: messageType,
+      mediaUrl: params.fileName,
+      metadata: {
+        source: "operator-panel",
+        fileName: params.fileName,
+        mimeType: params.mimeType
+      }
+    });
+
+    await this.integrationLogs.create({
+      provider: "z-api",
+      endpoint: "manual-media-reply",
+      statusCode: delivery.status,
+      message: "Midia manual enviada pelo operador.",
+      payload: {
+        conversationId: conversation.id,
+        phone: conversation.lead.phone,
+        storedMessageId: storedMessage.id,
+        fileName: params.fileName,
+        mimeType: params.mimeType
+      },
+      response: delivery
+    });
+
+    return {
+      delivered: true,
+      messageId: storedMessage.id,
+      type: messageType
+    };
+  }
 }

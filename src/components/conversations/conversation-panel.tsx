@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export function ConversationPanel({ conversation }: { conversation: ConversationDetail | null }) {
+export function ConversationPanel({
+  conversation,
+  onRefresh
+}: {
+  conversation: ConversationDetail | null;
+  onRefresh?: () => Promise<void> | void;
+}) {
   if (!conversation) {
     return (
       <Card className="flex h-[780px] items-center justify-center p-10 text-center">
@@ -74,7 +80,7 @@ export function ConversationPanel({ conversation }: { conversation: Conversation
           {conversation.aiSummary ? <Badge tone="orange">Resumo pronto para operador</Badge> : null}
         </div>
 
-        <ConversationComposer conversationId={conversation.id} />
+        <ConversationComposer conversationId={conversation.id} onSent={onRefresh} />
       </div>
     </Card>
   );
