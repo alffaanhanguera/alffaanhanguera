@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { knowledgeBaseSummary } from "@/server/knowledge/knowledge-base";
+import { FaqRepository } from "@/server/repositories/faq-repository";
 
 function shouldTransferToOperator(message: string) {
   const normalized = message.toLowerCase();
@@ -19,6 +20,8 @@ function shouldTransferToOperator(message: string) {
 }
 
 export class OpenAIClient {
+  private readonly faqRepository = new FaqRepository();
+
   async generateReply(input: { leadName: string; history: string[]; latestMessage: string }) {
     if (shouldTransferToOperator(input.latestMessage)) {
       return {
@@ -36,6 +39,16 @@ export class OpenAIClient {
       };
     }
 
+    const [faqItems, knowledgeDocuments] = await Promise.all([
+      this.faqRepository.listFaqItems(),
+      this.faqRepository.listKnowledgeDocuments()
+    ]);
+
+    const faqContext = [
+      ...faqItems.map((item) => `FAQ ${item.category}: ${item.question} => ${item.answer}`),
+      ...knowledgeDocuments.map((item) => `BASE ${item.category}: ${item.title} => ${item.content}`)
+    ].join(" | ");
+
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -47,7 +60,7 @@ export class OpenAIClient {
         input: [
           {
             role: "system",
-            content: `Voce atende matriculas da Anhanguera. Regras: ${knowledgeBaseSummary.rules.join(" ")}`
+            content: `Voce atende matriculas da Anhanguera. Regras: ${knowledgeBaseSummary.rules.join(" ")}. Base complementar obrigatoria: ${faqContext || "Sem FAQ cadastrada."}`
           },
           {
             role: "user",

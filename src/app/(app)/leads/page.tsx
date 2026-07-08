@@ -25,7 +25,7 @@ export default async function LeadsPage() {
         </Card>
       </div>
 
-      <LeadsKanban columns={kanban} />
+      <LeadsKanban initialColumns={kanban} initialLeads={leads} />
     </PageShell>
   );
 }

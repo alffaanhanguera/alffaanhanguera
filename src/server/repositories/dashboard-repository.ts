@@ -8,17 +8,37 @@ function startOfDay(date: Date) {
   return value;
 }
 
-function buildLastSevenDays() {
-  const today = startOfDay(new Date());
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (6 - index));
+export type DashboardRange = "7d" | "30d" | "90d" | "6m" | "1y";
+
+function buildRangeStart(range: DashboardRange) {
+  const date = startOfDay(new Date());
+
+  if (range === "30d") {
+    date.setDate(date.getDate() - 29);
     return date;
-  });
+  }
+
+  if (range === "90d") {
+    date.setDate(date.getDate() - 89);
+    return date;
+  }
+
+  if (range === "6m") {
+    date.setMonth(date.getMonth() - 6);
+    return date;
+  }
+
+  if (range === "1y") {
+    date.setFullYear(date.getFullYear() - 1);
+    return date;
+  }
+
+  date.setDate(date.getDate() - 6);
+  return date;
 }
 
 export class DashboardRepository {
-  async getMetrics() {
+  async getMetrics(range: DashboardRange = "7d") {
     if (!isDatabaseConfigured()) {
       return {
         leads: 0,
@@ -26,16 +46,14 @@ export class DashboardRepository {
         botAgents: 0,
         soldCourses: 0,
         courseSales: [],
-        leadConversion: Array.from({ length: 7 }, () => 0),
-        responseTime: Array.from({ length: 7 }, () => 0)
+        latestLeads: []
       };
     }
 
     try {
-      const lastSevenDays = buildLastSevenDays();
-      const rangeStart = lastSevenDays[0];
+      const rangeStart = buildRangeStart(range);
 
-      const [leads, humanAgents, botAgents, soldCourses, courseSalesRaw, recentLeads, recentConversations] = await Promise.all([
+      const [leads, humanAgents, botAgents, soldCourses, courseSalesRaw, latestLeads] = await Promise.all([
         prisma.lead.count(),
         prisma.conversation.count({
           where: {
@@ -76,26 +94,11 @@ export class DashboardRepository {
               gte: rangeStart
             }
           },
-          select: {
-            createdAt: true
-          }
-        }),
-        prisma.conversation.findMany({
-          where: {
-            updatedAt: {
-              gte: rangeStart
-            }
+          include: {
+            desiredCourse: true
           },
-          select: {
-            updatedAt: true,
-            messages: {
-              orderBy: { createdAt: "asc" },
-              select: {
-                direction: true,
-                createdAt: true
-              }
-            }
-          }
+          orderBy: { createdAt: "desc" },
+          take: 12
         })
       ]);
 
@@ -110,46 +113,6 @@ export class DashboardRepository {
           })
         : [];
 
-      const leadConversion = lastSevenDays.map((dayStart) => {
-        const dayEnd = new Date(dayStart);
-        dayEnd.setDate(dayEnd.getDate() + 1);
-
-        return recentLeads.filter((lead) => lead.createdAt >= dayStart && lead.createdAt < dayEnd).length;
-      });
-
-      const responseTime = lastSevenDays.map((dayStart) => {
-        const dayEnd = new Date(dayStart);
-        dayEnd.setDate(dayEnd.getDate() + 1);
-
-        const samples = recentConversations
-          .filter((conversation) => conversation.updatedAt >= dayStart && conversation.updatedAt < dayEnd)
-          .map((conversation) => {
-            const firstInbound = conversation.messages.find((message) => message.direction === "INBOUND");
-
-            if (!firstInbound) {
-              return null;
-            }
-
-            const firstOutbound = conversation.messages.find(
-              (message) => message.direction === "OUTBOUND" && message.createdAt >= firstInbound.createdAt
-            );
-
-            if (!firstOutbound) {
-              return null;
-            }
-
-            return Number(((firstOutbound.createdAt.getTime() - firstInbound.createdAt.getTime()) / 60000).toFixed(1));
-          })
-          .filter((value): value is number => value !== null);
-
-        if (!samples.length) {
-          return 0;
-        }
-
-        const average = samples.reduce((total, current) => total + current, 0) / samples.length;
-        return Number(average.toFixed(1));
-      });
-
       return {
         leads,
         humanAgents,
@@ -159,8 +122,14 @@ export class DashboardRepository {
           course: courses.find((course) => course.id === item.desiredCourseId)?.name ?? "Curso sem nome",
           total: item._count.desiredCourseId
         })),
-        leadConversion,
-        responseTime
+        latestLeads: latestLeads.map((lead) => ({
+          id: lead.id,
+          name: lead.fullName,
+          phone: lead.phone,
+          course: lead.desiredCourse?.name ?? "Nao informado",
+          city: lead.city ?? "Nao informada",
+          createdAt: lead.createdAt
+        }))
       };
     } catch {
       return {
@@ -169,8 +138,7 @@ export class DashboardRepository {
         botAgents: 0,
         soldCourses: 0,
         courseSales: [],
-        leadConversion: Array.from({ length: 7 }, () => 0),
-        responseTime: Array.from({ length: 7 }, () => 0)
+        latestLeads: []
       };
     }
   }

@@ -22,4 +22,42 @@ export class LeadRepository {
       return [];
     }
   }
+
+  async findById(id: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    try {
+      return await prisma.lead.findUnique({
+        where: { id },
+        include: {
+          desiredCourse: true
+        }
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async update(id: string, data: Record<string, unknown>) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.lead.update({
+      where: { id },
+      data
+    });
+  }
+
+  async remove(id: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.lead.delete({
+      where: { id }
+    });
+  }
 }

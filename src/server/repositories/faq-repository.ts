@@ -33,4 +33,87 @@ export class FaqRepository {
       return [];
     }
   }
+
+  async saveFaqItem(data: {
+    id?: string;
+    category: string;
+    question: string;
+    answer: string;
+    priority?: number;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    if (data.id) {
+      return prisma.faqItem.update({
+        where: { id: data.id },
+        data: {
+          category: data.category,
+          question: data.question,
+          answer: data.answer,
+          priority: data.priority ?? 0
+        }
+      });
+    }
+
+    return prisma.faqItem.create({
+      data: {
+        category: data.category,
+        question: data.question,
+        answer: data.answer,
+        priority: data.priority ?? 0
+      }
+    });
+  }
+
+  async saveKnowledgeDocument(data: {
+    id?: string;
+    category: string;
+    title: string;
+    content: string;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    if (data.id) {
+      return prisma.knowledgeDocument.update({
+        where: { id: data.id },
+        data: {
+          category: data.category,
+          title: data.title,
+          content: data.content
+        }
+      });
+    }
+
+    return prisma.knowledgeDocument.create({
+      data: {
+        category: data.category,
+        title: data.title,
+        content: data.content
+      }
+    });
+  }
+
+  async deleteFaqItem(id: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.faqItem.delete({
+      where: { id }
+    });
+  }
+
+  async deleteKnowledgeDocument(id: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.knowledgeDocument.delete({
+      where: { id }
+    });
+  }
 }

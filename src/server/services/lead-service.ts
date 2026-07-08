@@ -1,5 +1,6 @@
 import { LeadStatus, Modality } from "@prisma/client";
 import { LeadRepository } from "@/server/repositories/lead-repository";
+import type { LeadBoardItem } from "@/types/domain";
 
 function formatLeadStatus(status: LeadStatus) {
   if (status === LeadStatus.NEW) {
@@ -26,7 +27,7 @@ export class LeadService {
   async listForPanel() {
     const leads = await this.repository.list();
 
-    return leads.map((lead) => ({
+    return leads.map((lead): LeadBoardItem => ({
       id: lead.id,
       name: lead.fullName,
       phone: lead.phone,
@@ -40,6 +41,11 @@ export class LeadService {
               ? "Presencial"
               : "Nao definida",
       city: lead.city ?? "Nao informada",
+      region: lead.region ?? "Nao informada",
+      cpf: lead.cpf ?? "",
+      email: lead.email ?? "",
+      birthDate: lead.birthDate ? new Intl.DateTimeFormat("pt-BR").format(lead.birthDate) : "",
+      companyName: lead.companyName ?? "",
       status: formatLeadStatus(lead.status ?? LeadStatus.NEW),
       benefitSummary: lead.benefitSummary ?? "Nenhum beneficio"
     }));
@@ -85,5 +91,96 @@ export class LeadService {
         leads: groups.negotiation
       }
     ];
+  }
+
+  async updateLead(input: {
+    id: string;
+    name: string;
+    phone: string;
+    course: string;
+    modality: string;
+    city: string;
+    region: string;
+    cpf: string;
+    email: string;
+    birthDate: string;
+    companyName: string;
+    benefitSummary: string;
+    status: string;
+  }) {
+    const lead = await this.repository.findById(input.id);
+
+    if (!lead) {
+      throw new Error("Lead nao encontrado.");
+    }
+
+    const nextStatus =
+      input.status === "Qualificando"
+        ? LeadStatus.QUALIFYING
+        : input.status === "Pronto para operador"
+          ? LeadStatus.READY_FOR_OPERATOR
+          : input.status === "Negociacao"
+            ? LeadStatus.IN_NEGOTIATION
+            : input.status === "Matriculado"
+              ? LeadStatus.ENROLLED
+              : LeadStatus.NEW;
+
+    const nextModality =
+      input.modality === "EAD 100% Online" || input.modality === "EAD"
+        ? Modality.EAD
+        : input.modality === "Semipresencial"
+          ? Modality.SEMIPRESENTIAL
+          : input.modality === "Presencial"
+            ? Modality.PRESENTIAL
+            : null;
+
+    const birthDate = input.birthDate
+      ? (() => {
+          const [day, month, year] = input.birthDate.split("/");
+          if (!day || !month || !year) {
+            return null;
+          }
+          const parsed = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        })()
+      : null;
+
+    await this.repository.update(input.id, {
+      fullName: input.name,
+      phone: input.phone,
+      city: input.city || null,
+      region: input.region || null,
+      cpf: input.cpf || null,
+      email: input.email || null,
+      birthDate,
+      companyName: input.companyName || null,
+      benefitSummary: input.benefitSummary || null,
+      desiredModality: nextModality,
+      status: nextStatus
+    });
+
+    return this.listForPanel();
+  }
+
+  async updateLeadStatus(id: string, columnId: string) {
+    const status =
+      columnId === "qualifying"
+        ? LeadStatus.QUALIFYING
+        : columnId === "ready"
+          ? LeadStatus.READY_FOR_OPERATOR
+          : columnId === "negotiation"
+            ? LeadStatus.IN_NEGOTIATION
+            : LeadStatus.NEW;
+
+    await this.repository.update(id, {
+      status
+    });
+
+    return this.getKanbanData();
+  }
+
+  async deleteLead(id: string) {
+    await this.repository.remove(id);
+    return this.listForPanel();
   }
 }

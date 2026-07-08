@@ -6,6 +6,24 @@ import { ZApiClient } from "@/server/zapi/zapi-client";
 const PROVISIONAL_ALLOWED_PHONE = "5511978140022";
 const PROVISIONAL_FLOW_ACTIVATION_AT = new Date("2026-07-07T19:25:50-03:00");
 
+function getTypingDelaySeconds(message: string) {
+  const normalizedLength = message.trim().length;
+
+  if (normalizedLength <= 40) {
+    return 2;
+  }
+
+  if (normalizedLength <= 120) {
+    return 3;
+  }
+
+  if (normalizedLength <= 240) {
+    return 4;
+  }
+
+  return 5;
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -166,7 +184,9 @@ export class ZapiWebhookService {
         }
       });
 
-      const delivery = await this.zapi.sendTextMessage(normalizedPhone, chatbotReply.answer);
+      const delivery = await this.zapi.sendTextMessage(normalizedPhone, chatbotReply.answer, {
+        delayTyping: getTypingDelaySeconds(chatbotReply.answer)
+      });
       replied = delivery.delivered;
 
       await this.integrationLogs.create({
@@ -197,7 +217,9 @@ export class ZapiWebhookService {
         }
       });
 
-      const followUpDelivery = await this.zapi.sendTextMessage(normalizedPhone, followUp.content);
+      const followUpDelivery = await this.zapi.sendTextMessage(normalizedPhone, followUp.content, {
+        delayTyping: getTypingDelaySeconds(followUp.content)
+      });
       replied = replied || followUpDelivery.delivered;
 
       await this.integrationLogs.create({

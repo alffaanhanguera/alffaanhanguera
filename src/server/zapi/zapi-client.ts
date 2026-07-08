@@ -21,7 +21,15 @@ export class ZApiClient {
     };
   }
 
-  async sendTextMessage(phone: string, message: string) {
+  async sendTextMessage(
+    phone: string,
+    message: string,
+    options?: {
+      delayMessage?: number;
+      delayTyping?: number;
+      editMessageId?: string;
+    }
+  ) {
     if (!env.ZAPI_INSTANCE_ID || !env.ZAPI_INSTANCE_TOKEN) {
       return {
         delivered: false,
@@ -32,7 +40,10 @@ export class ZApiClient {
 
     return this.post("send-text", {
       phone,
-      message
+      message,
+      ...(options?.delayMessage ? { delayMessage: options.delayMessage } : {}),
+      ...(options?.delayTyping ? { delayTyping: options.delayTyping } : {}),
+      ...(options?.editMessageId ? { editMessageId: options.editMessageId } : {})
     });
   }
 

@@ -35,7 +35,7 @@ export async function AppHeader() {
 
       <div className="relative hidden max-w-xl flex-1 lg:block">
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <Input className="pl-10" placeholder="Pesquisar leads, conversas, cursos e operadores..." />
+        <Input className="border-slate-200 bg-white pl-10 text-slate-900 placeholder:text-slate-400" placeholder="Pesquisar leads, conversas, cursos e operadores..." />
       </div>
 
       <div className="flex items-center gap-4">

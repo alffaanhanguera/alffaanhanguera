@@ -1,4 +1,5 @@
 import { UserRole, UserStatus } from "@prisma/client";
+import { hash } from "bcryptjs";
 import { OperatorRepository } from "@/server/repositories/operator-repository";
 
 function formatRole(role: UserRole) {
@@ -48,5 +49,48 @@ export class OperatorService {
         permissions: user.permissions.map((permission) => permission.permission.code)
       }))
     };
+  }
+
+  async saveUser(input: {
+    id?: string;
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    password?: string;
+  }) {
+    const role =
+      input.role === "Supervisor"
+        ? UserRole.SUPERVISOR
+        : input.role === "Operador"
+          ? UserRole.OPERATOR
+          : UserRole.ADMIN;
+
+    const status =
+      input.status === "Bloqueado"
+        ? UserStatus.BLOCKED
+        : input.status === "Convidado"
+          ? UserStatus.INVITED
+          : UserStatus.ACTIVE;
+
+    if (input.id) {
+      await this.repository.updateUser(input.id, {
+        name: input.name,
+        email: input.email,
+        role,
+        status,
+        ...(input.password ? { passwordHash: await hash(input.password, 12) } : {})
+      });
+    } else {
+      await this.repository.createUser({
+        name: input.name,
+        email: input.email,
+        role,
+        status,
+        passwordHash: await hash(input.password || "acesso@2026", 12)
+      });
+    }
+
+    return this.getPanelData();
   }
 }

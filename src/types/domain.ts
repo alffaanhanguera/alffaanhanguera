@@ -44,3 +44,19 @@ export type ConversationDetail = {
   benefitSummary: string;
   messages: ConversationMessageItem[];
 };
+
+export type LeadBoardItem = {
+  id: string;
+  name: string;
+  phone: string;
+  course: string;
+  modality: string;
+  city: string;
+  region: string;
+  cpf: string;
+  email: string;
+  birthDate: string;
+  companyName: string;
+  status: string;
+  benefitSummary: string;
+};

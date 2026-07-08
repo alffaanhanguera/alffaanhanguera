@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 export function ConversationPanel({
   conversation,
@@ -25,6 +26,35 @@ export function ConversationPanel({
     );
   }
 
+  const currentConversation = conversation;
+
+  async function handleToggleConversationControl() {
+    try {
+      const response = await fetch("/api/conversations/transfer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          conversationId: currentConversation.id,
+          aiEnabled: !currentConversation.aiEnabled
+        })
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "Nao foi possivel atualizar a conversa.");
+        return;
+      }
+
+      toast.success(currentConversation.aiEnabled ? "Conversa transferida para humano." : "Conversa devolvida ao chatbot.");
+      await onRefresh?.();
+    } catch {
+      toast.error("Falha de comunicacao ao atualizar a conversa.");
+    }
+  }
+
   return (
     <Card className="flex h-[calc(100vh-14rem)] flex-col overflow-hidden p-0 md:h-[calc(100vh-15rem)] xl:h-[calc(100vh-13.5rem)]">
       <div className="flex flex-col gap-4 border-b px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -41,10 +71,10 @@ export function ConversationPanel({
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="orange">{conversation.modality}</Badge>
-          <Badge tone="green">Operador: {conversation.operator}</Badge>
-          <Button variant="outline" size="sm">
+          <Badge tone={conversation.aiEnabled ? "green" : "blue"}>{conversation.aiEnabled ? "Chatbot ativo" : `Operador: ${conversation.operator}`}</Badge>
+          <Button variant="outline" size="sm" onClick={handleToggleConversationControl}>
             <UserPlus className="mr-2 h-4 w-4" />
-            Transferir
+            {conversation.aiEnabled ? "Transferir para humano" : "Devolver para o Chat"}
           </Button>
           <Button variant="ghost" size="sm">
             <Phone className="h-4 w-4" />
@@ -80,7 +110,7 @@ export function ConversationPanel({
           {conversation.aiSummary ? <Badge tone="orange">Resumo pronto para operador</Badge> : null}
         </div>
 
-        <ConversationComposer conversationId={conversation.id} onSent={onRefresh} />
+        <ConversationComposer conversationId={conversation.id} onSent={onRefresh} assistantEnabled={conversation.aiEnabled} />
       </div>
     </Card>
   );

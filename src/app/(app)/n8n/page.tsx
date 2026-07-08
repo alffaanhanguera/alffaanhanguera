@@ -13,7 +13,7 @@ export default async function N8NPage() {
     new CourseService().getN8NCatalog()
   ]);
 
-  const agentName = settings.ai.assistantName || "Juliana";
+  const agentName = "Juliana";
   const userName = session?.user.name ?? "Administrador";
   const userInitial = userName.slice(0, 1).toUpperCase();
 

@@ -206,4 +206,34 @@ export class ConversationService {
       type: messageType
     };
   }
+
+  async toggleAiControl(conversationId: string, aiEnabled: boolean) {
+    const conversation = await this.repository.getById(conversationId);
+
+    if (!conversation) {
+      throw new Error("Conversa nao encontrada.");
+    }
+
+    await this.repository.updateConversation(conversationId, {
+      aiEnabled,
+      status: aiEnabled ? "OPEN" : "TRANSFERRED",
+      unreadCount: 0
+    });
+
+    await this.integrationLogs.create({
+      provider: "crm",
+      endpoint: "conversation-toggle-ai",
+      statusCode: 200,
+      message: aiEnabled ? "Conversa devolvida ao chatbot." : "Conversa transferida para humano.",
+      payload: {
+        conversationId,
+        aiEnabled
+      }
+    });
+
+    return {
+      success: true,
+      aiEnabled
+    };
+  }
 }

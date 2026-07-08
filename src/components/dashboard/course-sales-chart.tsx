@@ -1,9 +1,11 @@
 import { Card } from "@/components/ui/card";
 
 export function CourseSalesChart({
-  items
+  items,
+  title = "Cursos mais vendidos"
 }: {
   items: Array<{ course: string; total: number }>;
+  title?: string;
 }) {
   const max = Math.max(...items.map((item) => item.total), 1);
 
@@ -11,8 +13,7 @@ export function CourseSalesChart({
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-[hsl(var(--muted-foreground))]">Performance comercial</p>
-          <h2 className="mt-2 text-xl font-semibold">Cursos vendidos</h2>
+          <h2 className="text-xl font-semibold">{title}</h2>
         </div>
         <p className="text-sm text-[hsl(var(--muted-foreground))]">Atualizacao com base nos leads matriculados</p>
       </div>

@@ -20,4 +20,13 @@ export class SettingsService {
       }
     };
   }
+
+  async saveAiSettings(input: {
+    assistantName: string;
+    systemPrompt: string;
+    transferPrompt: string;
+  }) {
+    await this.repository.saveAiSettings(input);
+    return this.getPanelData();
+  }
 }

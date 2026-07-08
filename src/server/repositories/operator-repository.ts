@@ -32,4 +32,37 @@ export class OperatorRepository {
       return [];
     }
   }
+
+  async createUser(data: {
+    name: string;
+    email: string;
+    passwordHash: string;
+    role: UserRole;
+    status: UserStatus;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.user.create({
+      data
+    });
+  }
+
+  async updateUser(id: string, data: {
+    name?: string;
+    email?: string;
+    passwordHash?: string;
+    role?: UserRole;
+    status?: UserStatus;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    return prisma.user.update({
+      where: { id },
+      data
+    });
+  }
 }

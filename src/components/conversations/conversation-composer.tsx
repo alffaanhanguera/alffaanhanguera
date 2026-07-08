@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function ConversationComposer({
   conversationId,
-  onSent
+  onSent,
+  assistantEnabled
 }: {
   conversationId: string;
   onSent?: () => Promise<void> | void;
+  assistantEnabled: boolean;
 }) {
   const router = useRouter();
   const [content, setContent] = useState("");
@@ -144,6 +146,11 @@ export function ConversationComposer({
           {isSending ? "Enviando" : "Enviar"}
         </Button>
       </div>
+      <p className="text-xs text-slate-500">
+        {assistantEnabled
+          ? "Chatbot Juliana ativo. Use o botao de transferencia quando quiser assumir manualmente."
+          : "Atendimento humano ativo. Enquanto isso, chatbot e IA permanecem silenciosos."}
+      </p>
     </form>
   );
 }

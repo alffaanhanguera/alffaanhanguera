@@ -3,8 +3,8 @@ import { DashboardRepository } from "@/server/repositories/dashboard-repository"
 export class DashboardService {
   constructor(private readonly repository = new DashboardRepository()) {}
 
-  async getSummary() {
-    const metrics = await this.repository.getMetrics();
+  async getSummary(range: "7d" | "30d" | "90d" | "6m" | "1y" = "7d") {
+    const metrics = await this.repository.getMetrics(range);
 
     return {
       metrics: [
@@ -14,10 +14,9 @@ export class DashboardService {
         { label: "Cursos vendidos", value: metrics.soldCourses.toString(), variation: "Leads matriculados" }
       ],
       charts: {
-        leadConversion: metrics.leadConversion,
-        responseTime: metrics.responseTime,
         courseSales: metrics.courseSales
-      }
+      },
+      latestLeads: metrics.latestLeads
     };
   }
 }

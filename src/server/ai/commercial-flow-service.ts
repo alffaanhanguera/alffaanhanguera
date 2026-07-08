@@ -442,7 +442,7 @@ export class CommercialFlowService {
       });
 
       return {
-        answer: "Qual faculdade você deseja fazer?",
+        answer: "Qual curso deseja fazer?",
         shouldTransfer: false
       };
     }
@@ -452,7 +452,7 @@ export class CommercialFlowService {
 
       if (!course) {
         return {
-          answer: "Qual faculdade você deseja fazer?",
+          answer: "Qual curso deseja fazer?",
           shouldTransfer: false
         };
       }
@@ -475,7 +475,7 @@ export class CommercialFlowService {
 
     if (!course) {
       return {
-        answer: "Qual faculdade você deseja fazer?",
+        answer: "Qual curso deseja fazer?",
         shouldTransfer: false
       };
     }

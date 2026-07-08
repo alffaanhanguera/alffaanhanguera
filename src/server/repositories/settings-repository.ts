@@ -18,4 +18,32 @@ export class SettingsRepository {
       return { ai: null, zapi: null };
     }
   }
+
+  async saveAiSettings(data: {
+    assistantName: string;
+    systemPrompt: string;
+    transferPrompt: string;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    const current = await prisma.aiSetting.findFirst({
+      orderBy: { updatedAt: "desc" }
+    });
+
+    if (current) {
+      return prisma.aiSetting.update({
+        where: { id: current.id },
+        data
+      });
+    }
+
+    return prisma.aiSetting.create({
+      data: {
+        organizationName: "Alffa Educacao",
+        ...data
+      }
+    });
+  }
 }
