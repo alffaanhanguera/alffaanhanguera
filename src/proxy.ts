@@ -29,8 +29,9 @@ export function proxy(request: NextRequest) {
   }
 
   const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
 
-  if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route)) && !accessToken) {
+  if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route)) && !accessToken && !refreshToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

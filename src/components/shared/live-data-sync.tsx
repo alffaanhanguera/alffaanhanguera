@@ -32,6 +32,16 @@ export function LiveDataSync() {
       return;
     }
 
+    const refreshSession = async () => {
+      try {
+        await fetch("/api/auth/refresh", {
+          method: "POST"
+        });
+      } catch {
+        // keep best-effort silent refresh
+      }
+    };
+
     const sync = () => {
       if (document.visibilityState !== "visible" || hasEditableFocus()) {
         return;
@@ -41,11 +51,13 @@ export function LiveDataSync() {
     };
 
     const interval = window.setInterval(sync, 10000);
+    const refreshInterval = window.setInterval(refreshSession, 5 * 60 * 1000);
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
 
     return () => {
       window.clearInterval(interval);
+      window.clearInterval(refreshInterval);
       window.removeEventListener("focus", sync);
       document.removeEventListener("visibilitychange", sync);
     };
