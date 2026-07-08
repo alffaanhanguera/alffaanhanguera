@@ -18,6 +18,13 @@ export function CourseSalesChart({
       </div>
 
       <div className="mt-8 space-y-4">
+        {items.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-8 text-center">
+            <p className="text-sm font-semibold text-slate-900">Nenhum curso vendido ainda</p>
+            <p className="mt-2 text-sm text-slate-500">Assim que houver leads matriculados, o ranking comercial aparecera aqui.</p>
+          </div>
+        ) : null}
+
         {items.map((item) => (
           <div key={item.course}>
             <div className="mb-2 flex items-center justify-between gap-4 text-sm">

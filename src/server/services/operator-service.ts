@@ -31,28 +31,6 @@ export class OperatorService {
   async getPanelData() {
     const users = await this.repository.listUsers();
 
-    if (!users.length) {
-      return {
-        summary: {
-          total: 3,
-          admins: 1,
-          supervisors: 1,
-          operators: 1
-        },
-        users: [
-          {
-            id: "mock-admin",
-            name: "Administrador",
-            email: "admin@alffaeducacao.com.br",
-            role: "Administrador",
-            status: "Ativo",
-            conversations: 6,
-            permissions: ["dashboard:view", "conversation:manage", "settings:manage"]
-          }
-        ]
-      };
-    }
-
     return {
       summary: {
         total: users.length,

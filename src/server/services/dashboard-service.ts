@@ -14,9 +14,9 @@ export class DashboardService {
         { label: "Cursos vendidos", value: metrics.soldCourses.toString(), variation: "Leads matriculados" }
       ],
       charts: {
-        leadConversion: [42, 51, 57, 63, 70, 79, 84],
-        responseTime: [5.2, 4.8, 4.1, 3.6, 3.2, 2.8, 2.4],
-        courseSales: metrics.courseSales.length ? metrics.courseSales : [{ course: "Administracao", total: 16 }]
+        leadConversion: metrics.leadConversion,
+        responseTime: metrics.responseTime,
+        courseSales: metrics.courseSales
       }
     };
   }

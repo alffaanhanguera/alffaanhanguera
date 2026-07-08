@@ -177,7 +177,7 @@ export class ZapiWebhookService {
         payload: {
           phone: normalizedPhone,
           conversationId: conversation.id,
-          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
+          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : input.messageId ?? null
         },
         response: delivery
       });
@@ -208,7 +208,7 @@ export class ZapiWebhookService {
         payload: {
           phone: normalizedPhone,
           conversationId: conversation.id,
-          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : "mock"
+          inboundMessageId: "id" in inboundMessage ? inboundMessage.id : input.messageId ?? null
         },
         response: followUpDelivery
       });

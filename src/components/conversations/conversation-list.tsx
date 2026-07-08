@@ -9,10 +9,14 @@ import type { ConversationListItem } from "@/types/domain";
 export function ConversationList({
   items,
   selectedId,
+  search,
+  onSearchChange,
   onSelectConversation
 }: {
   items: ConversationListItem[];
   selectedId?: string;
+  search: string;
+  onSearchChange?: (value: string) => void;
   onSelectConversation?: (conversationId: string) => void;
 }) {
   return (
@@ -20,7 +24,12 @@ export function ConversationList({
       <div className="border-b p-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input className="pl-10" placeholder="Pesquisar conversas..." />
+          <Input
+            className="pl-10"
+            placeholder="Pesquisar conversas..."
+            value={search}
+            onChange={(event) => onSearchChange?.(event.target.value)}
+          />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge tone="blue">Todos</Badge>

@@ -13,12 +13,7 @@ export function useAuthUser() {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    setUser({
-      id: "seed-admin",
-      name: "Administrador",
-      email: "admin@alffaeducacao.com.br",
-      role: "ADMIN"
-    });
+    setUser(null);
   }, []);
 
   return user;

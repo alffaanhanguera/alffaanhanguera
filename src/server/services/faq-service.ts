@@ -10,33 +10,8 @@ export class FaqService {
     ]);
 
     return {
-      faqItems: faqItems.length
-        ? faqItems
-        : [
-            {
-              id: "mock-faq",
-              category: "Matricula",
-              question: "Como funciona a matricula no EAD?",
-              answer: "O Chatbot Juliana deve explicar o fluxo geral e transferir quando houver aceite comercial.",
-              priority: 10,
-              active: true,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ],
-      knowledgeDocuments: knowledgeDocuments.length
-        ? knowledgeDocuments
-        : [
-            {
-              id: "mock-doc",
-              title: "Regras comerciais base",
-              category: "Politicas",
-              content: "Documento de apoio para respostas seguras e consulta do Chatbot Juliana.",
-              active: true,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ]
+      faqItems,
+      knowledgeDocuments
     };
   }
 }

@@ -63,11 +63,7 @@ export class ConversationRepository {
     metadata?: Record<string, unknown>;
   }) {
     if (!isDatabaseConfigured()) {
-      return {
-        id: "mock-message",
-        conversationId: params.phone,
-        content: params.content
-      };
+      throw new Error("Banco de dados indisponivel para registrar mensagem recebida.");
     }
 
     if (params.externalMessageId) {
@@ -152,11 +148,7 @@ export class ConversationRepository {
     metadata?: Record<string, unknown>;
   }) {
     if (!isDatabaseConfigured()) {
-      return {
-        id: "mock-ai-message",
-        conversationId: params.conversationId,
-        content: params.content
-      };
+      throw new Error("Banco de dados indisponivel para registrar resposta automatica.");
     }
 
     await prisma.conversation.update({
@@ -186,11 +178,7 @@ export class ConversationRepository {
     metadata?: Record<string, unknown>;
   }) {
     if (!isDatabaseConfigured()) {
-      return {
-        id: "mock-manual-message",
-        conversationId: params.conversationId,
-        content: params.content
-      };
+      throw new Error("Banco de dados indisponivel para registrar resposta manual.");
     }
 
     await prisma.conversation.update({

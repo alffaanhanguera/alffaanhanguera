@@ -26,21 +26,6 @@ export class LeadService {
   async listForPanel() {
     const leads = await this.repository.list();
 
-    if (leads.length === 0) {
-      return [
-        {
-          id: "mock-lead",
-          name: "Maria Silva Santos",
-          phone: "5511999999999",
-          course: "Administracao",
-          modality: "EAD 100% Online",
-          city: "Sao Paulo",
-          status: "Qualificando",
-          benefitSummary: "ENEM identificado"
-        }
-      ];
-    }
-
     return leads.map((lead) => ({
       id: lead.id,
       name: lead.fullName,

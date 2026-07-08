@@ -18,24 +18,40 @@ export default async function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <h2 className="text-lg font-semibold">Conversao de leads por dia</h2>
-          <div className="mt-6 flex items-end gap-3">
-            {data.charts.leadConversion.map((value, index) => (
-              <div key={value} className="flex-1">
-                <div className="rounded-t-3xl bg-blue-800" style={{ height: `${value * 2}px` }} />
-                <p className="mt-2 text-center text-xs text-slate-500">D{index + 1}</p>
+          <div className="mt-6 min-h-40">
+            {data.charts.leadConversion.every((value) => value === 0) ? (
+              <div className="flex h-full min-h-40 items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-5 text-center">
+                <p className="text-sm text-slate-500">Ainda nao existem leads suficientes para montar o grafico diario.</p>
               </div>
-            ))}
+            ) : (
+              <div className="flex h-full items-end gap-3">
+                {data.charts.leadConversion.map((value, index) => (
+                  <div key={`lead-${index}-${value}`} className="flex-1">
+                    <div className="rounded-t-3xl bg-blue-800" style={{ height: `${Math.max(value * 2, 12)}px` }} />
+                    <p className="mt-2 text-center text-xs text-slate-500">D{index + 1}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
         <Card>
           <h2 className="text-lg font-semibold">Tempo medio de resposta (min)</h2>
-          <div className="mt-6 flex items-end gap-3">
-            {data.charts.responseTime.map((value, index) => (
-              <div key={value} className="flex-1">
-                <div className="rounded-t-3xl bg-orange-500" style={{ height: `${value * 60}px` }} />
-                <p className="mt-2 text-center text-xs text-slate-500">D{index + 1}</p>
+          <div className="mt-6 min-h-40">
+            {data.charts.responseTime.every((value) => value === 0) ? (
+              <div className="flex h-full min-h-40 items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-5 text-center">
+                <p className="text-sm text-slate-500">O tempo medio aparecera quando houver interacoes completas entre lead e atendimento.</p>
               </div>
-            ))}
+            ) : (
+              <div className="flex h-full items-end gap-3">
+                {data.charts.responseTime.map((value, index) => (
+                  <div key={`response-${index}-${value}`} className="flex-1">
+                    <div className="rounded-t-3xl bg-orange-500" style={{ height: `${Math.max(value * 60, 12)}px` }} />
+                    <p className="mt-2 text-center text-xs text-slate-500">D{index + 1}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       </div>
