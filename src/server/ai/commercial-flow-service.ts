@@ -204,6 +204,10 @@ function buildWelcomeMessage() {
 }
 
 function buildModalitiesMessage(firstName: string, courseName: string, modalities: Modality[]) {
+  if (modalities.length === 1) {
+    return `${firstName} 😊, a faculdade de ${courseName} nós ofertamos na modalidade: ${formatModalityLabel(modalities[0])}. Funciona para você?`;
+  }
+
   return `${firstName} 😊, a faculdade de ${courseName} nós ofertamos nas modalidades: ${modalities
     .map(formatModalityLabel)
     .join(", ")}, qual funciona melhor para você?`;
@@ -575,8 +579,12 @@ export class CommercialFlowService {
     }
 
     if (state.stage === "ask_modality") {
-      const selectedModality = parseModality(message);
       const availableModalities = this.courses.getAvailableModalities(course);
+      const singleAvailableModality = availableModalities.length === 1 ? availableModalities[0] : null;
+      const yesNoAnswer = parseYesNo(message);
+      const selectedModality =
+        parseModality(message) ??
+        (singleAvailableModality && yesNoAnswer === true ? singleAvailableModality : null);
 
       if (!selectedModality || !availableModalities.includes(selectedModality)) {
         return {
