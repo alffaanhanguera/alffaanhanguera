@@ -60,7 +60,7 @@ export class OpenAIClient {
         input: [
           {
             role: "system",
-            content: `Voce atende matriculas da Anhanguera. Regras: ${knowledgeBaseSummary.rules.join(" ")}. Base complementar obrigatoria: ${faqContext || "Sem FAQ cadastrada."}`
+            content: `Voce atende matriculas da Anhanguera. Regras comerciais: ${knowledgeBaseSummary.rules.join(" ")}. Regras conversacionais: ${knowledgeBaseSummary.conversationalRules.join(" ")}. Base complementar obrigatoria: ${faqContext || "Sem FAQ cadastrada."}`
           },
           {
             role: "user",

@@ -12,5 +12,14 @@ export const knowledgeBaseSummary = {
     "Enviar vestibular",
     "Liberar RA"
   ],
+  conversationalRules: [
+    "Responder a duvida e voltar exatamente para o ponto atual do fluxo",
+    "Nunca reiniciar o atendimento",
+    "Nunca repetir pergunta ja respondida",
+    "Fazer apenas uma pergunta por mensagem",
+    "Nunca inventar informacoes academicas ou comerciais",
+    "Usar linguagem simples, natural e consultiva",
+    "Interpretar abreviacoes, erros de digitacao e mensagens curtas pelo contexto"
+  ],
   rules: aiBusinessRules
 };

@@ -1,5 +1,6 @@
 import { ConversationStatus, LeadStatus, Modality } from "@prisma/client";
 import { formatCurrency, sanitizeDigits } from "@/lib/utils";
+import { FaqKnowledgeService } from "@/server/faq/faq-knowledge-service";
 import { ConversationRepository } from "@/server/repositories/conversation-repository";
 import { CourseRepository } from "@/server/repositories/course-repository";
 
@@ -252,8 +253,161 @@ function extractFirstName(message: string) {
 export class CommercialFlowService {
   constructor(
     private readonly conversations = new ConversationRepository(),
-    private readonly courses = new CourseRepository()
+    private readonly courses = new CourseRepository(),
+    private readonly faqKnowledge = new FaqKnowledgeService()
   ) {}
+
+  private looksLikeFaqInterruption(message: string) {
+    const normalized = normalizeText(message);
+    const questionStarters = [
+      "como ",
+      "qual ",
+      "quanto ",
+      "tem ",
+      "posso ",
+      "preciso ",
+      "o diploma",
+      "essa faculdade",
+      "a faculdade",
+      "vocês",
+      "voces"
+    ];
+    const topicKeywords = [
+      "mec",
+      "diploma",
+      "bolsa",
+      "desconto",
+      "valor",
+      "mensalidade",
+      "estagio",
+      "tcc",
+      "prova",
+      "documento",
+      "matricula",
+      "enem",
+      "transferencia",
+      "segunda graduacao"
+    ];
+
+    if (message.includes("?")) {
+      return true;
+    }
+
+    if (questionStarters.some((keyword) => normalized.startsWith(keyword))) {
+      return true;
+    }
+
+    return normalized.length > 12 && topicKeywords.some((keyword) => normalized.includes(keyword));
+  }
+
+  private buildResumePrompt(params: {
+    stage: WorkflowStage;
+    state: WorkflowState;
+    course: NonNullable<Awaited<ReturnType<CourseRepository["findById"]>>> | null;
+  }) {
+    if (params.stage === "ask_name") {
+      return "Qual seu nome por gentileza?";
+    }
+
+    if (params.stage === "ask_course") {
+      return "Qual curso deseja fazer?";
+    }
+
+    if (params.stage === "ask_city") {
+      return "Em qual cidade você reside?";
+    }
+
+    if (params.stage === "ask_region") {
+      return "Me informe a região por gentileza?";
+    }
+
+    if (params.stage === "ask_enem") {
+      return "Você realizou o ENEM nos últimos 10 anos?";
+    }
+
+    if (params.stage === "ask_clt") {
+      return "Você trabalha no regime CLT atualmente?";
+    }
+
+    if (params.stage === "ask_company") {
+      return "Em qual empresa você trabalha?";
+    }
+
+    if (params.stage === "ask_modality" && params.course) {
+      return buildModalitiesMessage(params.state.firstName ?? "Aluno", params.course.name, this.courses.getAvailableModalities(params.course));
+    }
+
+    if (params.stage === "confirm_ead") {
+      return "Funciona para você o EAD?";
+    }
+
+    if (params.stage === "collect_full_name") {
+      return "Me informa o seu *NOME COMPLETO*";
+    }
+
+    if (params.stage === "collect_cpf") {
+      return "Agora me informe o seu CPF:";
+    }
+
+    if (params.stage === "collect_birth_date") {
+      return "Qual é sua data de nascimento?";
+    }
+
+    if (params.stage === "collect_email") {
+      return "Me informe seu e-mail por gentileza?";
+    }
+
+    if (params.stage === "ead_offer_sent") {
+      return "Gostaria de prosseguir com a matrícula?";
+    }
+
+    if (params.stage === "ask_shift") {
+      return `Os turnos disponíveis são:\n\nDiurno: 8h às 11h\nNoturno: 19h às 22h\n\nQual funciona melhor para você?`;
+    }
+
+    return null;
+  }
+
+  private async tryHandleFaqInterruption(params: {
+    latestMessage: string;
+    stage: WorkflowStage;
+    state: WorkflowState;
+    course: NonNullable<Awaited<ReturnType<CourseRepository["findById"]>>> | null;
+  }) {
+    if (!this.looksLikeFaqInterruption(params.latestMessage)) {
+      return null;
+    }
+
+    const match = await this.faqKnowledge.findBestAnswer(params.latestMessage);
+
+    if (!match) {
+      const resumePrompt = this.buildResumePrompt({
+        stage: params.stage,
+        state: params.state,
+        course: params.course
+      });
+
+      if (!resumePrompt) {
+        return null;
+      }
+
+      return {
+        answer: `Vou consultar a base oficial para te orientar corretamente.\n\nAgora, voltando ao nosso atendimento...\n${resumePrompt}`,
+        shouldTransfer: false
+      } satisfies ChatbotReply;
+    }
+
+    const resumePrompt = this.buildResumePrompt({
+      stage: params.stage,
+      state: params.state,
+      course: params.course
+    });
+
+    return {
+      answer: resumePrompt ? `${match.answer}\n\nAgora, voltando ao nosso atendimento...\n${resumePrompt}` : match.answer,
+      shouldTransfer: false
+    } satisfies ChatbotReply;
+  }
 
   private getWorkflowState(notes?: string | null): WorkflowState {
     if (!notes) {
@@ -431,6 +585,17 @@ export class CommercialFlowService {
     }
 
     if (state.stage === "ask_name") {
+      const interruption = await this.tryHandleFaqInterruption({
+        latestMessage: message,
+        stage: state.stage,
+        state,
+        course: null
+      });
+
+      if (interruption) {
+        return interruption;
+      }
+
       const firstName = extractFirstName(message) ?? "Aluno";
 
       await this.persistState({
@@ -448,6 +613,17 @@ export class CommercialFlowService {
     }
 
     if (state.stage === "ask_course") {
+      const interruption = await this.tryHandleFaqInterruption({
+        latestMessage: message,
+        stage: state.stage,
+        state,
+        course: null
+      });
+
+      if (interruption) {
+        return interruption;
+      }
+
       const course = await this.courses.findByMessage(message);
 
       if (!course) {
@@ -478,6 +654,17 @@ export class CommercialFlowService {
         answer: "Qual curso deseja fazer?",
         shouldTransfer: false
       };
+    }
+
+    const interruption = await this.tryHandleFaqInterruption({
+      latestMessage: message,
+      stage: state.stage,
+      state,
+      course
+    });
+
+    if (interruption) {
+      return interruption;
     }
 
     if (state.stage === "ask_city") {

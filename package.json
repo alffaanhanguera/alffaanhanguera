@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:import-courses": "node scripts/import-courses.mjs",
-    "db:build-course-sql": "node scripts/build-course-import-sql.mjs"
+    "db:build-course-sql": "node scripts/build-course-import-sql.mjs",
+    "db:import-faq-pdf": "tsx scripts/import-faq-pdf-base.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
