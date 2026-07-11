@@ -119,7 +119,16 @@ export function ConversationPanel({
     if (!normalized || draftTags.includes(normalized)) {
       return;
     }
-    setDraftTags((current) => [...current, normalized]);
+
+    const nextTags = [...draftTags, normalized];
+    setDraftTags(nextTags);
+    void persistConversationMetadata(nextTags, leadNotes, pipelineStageId);
+  }
+
+  function removeTag(tag: string) {
+    const nextTags = draftTags.filter((item) => item !== tag);
+    setDraftTags(nextTags);
+    void persistConversationMetadata(nextTags, leadNotes, pipelineStageId);
   }
 
   function renderMessageBody(message: ConversationDetail["messages"][number]) {
@@ -246,7 +255,7 @@ export function ConversationPanel({
                     draftTags.map((tag) => (
                       <Badge key={tag} tone="blue" className="gap-2">
                         {tag}
-                        <button type="button" onClick={() => setDraftTags((current) => current.filter((item) => item !== tag))}>
+                        <button type="button" onClick={() => removeTag(tag)}>
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
@@ -278,7 +287,11 @@ export function ConversationPanel({
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        addTag(customTag);
+                        const normalized = customTag.trim();
+                        if (!normalized) {
+                          return;
+                        }
+                        addTag(normalized);
                         setCustomTag("");
                       }
                     }}
@@ -287,15 +300,15 @@ export function ConversationPanel({
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      addTag(customTag);
+                      const normalized = customTag.trim();
+                      if (!normalized) {
+                        return;
+                      }
+                      addTag(normalized);
                       setCustomTag("");
                     }}
                   >
                     Adicionar
-                  </Button>
-                  <Button type="button" onClick={() => void persistConversationMetadata()}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isSavingMeta ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
               </div>

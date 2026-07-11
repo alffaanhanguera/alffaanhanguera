@@ -68,12 +68,13 @@ export function ConversationList({
                 <p className="mt-1 truncate text-sm text-slate-500">{item.lastMessage}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge tone="slate">{item.status}</Badge>
-                  <Badge tone="green">{item.operator}</Badge>
-                  {item.tags.map((tag) => (
+                  {item.tags.slice(0, 2).map((tag) => (
                     <Badge key={tag} tone="blue">
                       {tag}
                     </Badge>
                   ))}
+                  {item.tags.length > 2 ? <Badge tone="slate">+{item.tags.length - 2}</Badge> : null}
+                  <Badge tone="green">{item.operator}</Badge>
                 </div>
               </div>
               {item.unreadCount > 0 ? (
