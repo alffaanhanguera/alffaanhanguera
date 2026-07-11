@@ -14,7 +14,7 @@ export async function signAccessToken(payload: TokenPayload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime("24h")
     .sign(accessSecret);
 }
 
@@ -22,7 +22,7 @@ export async function signRefreshToken(payload: TokenPayload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime("30d")
     .sign(refreshSecret);
 }
 

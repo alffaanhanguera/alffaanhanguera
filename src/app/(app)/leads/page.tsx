@@ -16,12 +16,12 @@ export default async function LeadsPage() {
           <p className="mt-3 text-3xl font-semibold">{leads.length}</p>
         </Card>
         <Card>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Prontos para operador</p>
-          <p className="mt-3 text-3xl font-semibold">{kanban.find((column) => column.id === "ready")?.leads.length ?? 0}</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Aguardando operador</p>
+          <p className="mt-3 text-3xl font-semibold">{kanban.find((column) => column.id === "waiting-operator")?.leads.length ?? 0}</p>
         </Card>
         <Card>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Fechamento e vendas</p>
-          <p className="mt-3 text-3xl font-semibold">{kanban.find((column) => column.id === "negotiation")?.leads.length ?? 0}</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Matrículas concluídas</p>
+          <p className="mt-3 text-3xl font-semibold">{kanban.find((column) => column.id === "completed-enrollment")?.leads.length ?? 0}</p>
         </Card>
       </div>
 

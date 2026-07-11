@@ -15,9 +15,34 @@ export class ZApiClient {
       body: JSON.stringify(body)
     });
 
+    let responseBody: unknown = null;
+
+    try {
+      responseBody = await response.json();
+    } catch {
+      try {
+        responseBody = await response.text();
+      } catch {
+        responseBody = null;
+      }
+    }
+
+    const payload =
+      typeof responseBody === "object" && responseBody ? (responseBody as Record<string, unknown>) : undefined;
+    const messageId =
+      typeof payload?.messageId === "string"
+        ? payload.messageId
+        : typeof payload?.zaapId === "string"
+          ? payload.zaapId
+          : typeof payload?.id === "string"
+            ? payload.id
+            : undefined;
+
     return {
       delivered: response.ok,
-      status: response.status
+      status: response.status,
+      messageId,
+      responseBody
     };
   }
 

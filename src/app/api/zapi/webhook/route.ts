@@ -157,6 +157,10 @@ function extractText(payload: ZapiReceivedPayload, type: ReturnType<typeof detec
 }
 
 function shouldIgnorePayload(payload: ZapiReceivedPayload) {
+  if (payload.fromMe && payload.messageId && payload.status && payload.status.toUpperCase() !== "RECEIVED") {
+    return null;
+  }
+
   if (payload.type !== "ReceivedCallback") {
     return "non_received_callback";
   }
@@ -214,6 +218,34 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as ZapiReceivedPayload;
+
+    if (body.fromMe && body.messageId && body.status && body.status.toUpperCase() !== "RECEIVED") {
+      const status = body.status.toUpperCase();
+
+      await new ZapiWebhookService().handleOutboundStatus({
+        messageId: body.messageId,
+        status,
+        occurredAt: new Date()
+      });
+
+      await integrationLogs.create({
+        provider: "z-api",
+        endpoint: "webhook-outbound-status",
+        statusCode: 200,
+        message: `Status outbound processado: ${status}`,
+        payload: buildWebhookSummary(body),
+        response: {
+          received: true,
+          outboundStatus: status
+        }
+      });
+
+      return apiSuccess({
+        received: true,
+        outboundStatus: status
+      });
+    }
+
     const ignoreReason = shouldIgnorePayload(body);
 
     if (ignoreReason) {

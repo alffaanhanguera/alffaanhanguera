@@ -55,6 +55,32 @@ export class ConversationRepository {
     }
   }
 
+  async getByLeadId(leadId: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    try {
+      return await prisma.conversation.findFirst({
+        where: { leadId },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          lead: {
+            include: {
+              desiredCourse: true
+            }
+          },
+          assignedOperator: true,
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        }
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async createInboundMessage(params: {
     phone: string;
     content: string;
@@ -175,6 +201,7 @@ export class ConversationRepository {
     content: string;
     type?: "TEXT" | "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "PDF" | "LOCATION";
     mediaUrl?: string;
+    externalMessageId?: string;
     metadata?: Record<string, unknown>;
   }) {
     if (!isDatabaseConfigured()) {
@@ -193,11 +220,74 @@ export class ConversationRepository {
     return prisma.message.create({
       data: {
         conversationId: params.conversationId,
+        externalMessageId: params.externalMessageId,
         direction: "OUTBOUND",
         type: params.type ?? "TEXT",
         content: params.content,
         mediaUrl: params.mediaUrl,
         metadata: params.metadata as Prisma.InputJsonValue | undefined
+      }
+    });
+  }
+
+  async ensureConversationForLead(leadId: string) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    const existing = await prisma.conversation.findFirst({
+      where: { leadId },
+      orderBy: { updatedAt: "desc" }
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return prisma.conversation.create({
+      data: {
+        leadId,
+        tags: []
+      }
+    });
+  }
+
+  async updateOutboundMessageStatus(params: {
+    externalMessageId: string;
+    status: string;
+    readAt?: Date | null;
+    deliveredAt?: Date | null;
+  }) {
+    if (!isDatabaseConfigured()) {
+      return null;
+    }
+
+    const message = await prisma.message.findFirst({
+      where: {
+        externalMessageId: params.externalMessageId,
+        direction: "OUTBOUND"
+      }
+    });
+
+    if (!message) {
+      return null;
+    }
+
+    const metadata = typeof message.metadata === "object" && message.metadata ? { ...(message.metadata as Record<string, unknown>) } : {};
+    metadata.deliveryStatus = params.status;
+
+    if (params.deliveredAt) {
+      metadata.deliveredAt = params.deliveredAt.toISOString();
+    }
+
+    if (params.readAt) {
+      metadata.readAt = params.readAt.toISOString();
+    }
+
+    return prisma.message.update({
+      where: { id: message.id },
+      data: {
+        metadata: metadata as Prisma.InputJsonValue
       }
     });
   }

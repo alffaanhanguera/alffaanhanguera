@@ -51,7 +51,7 @@ export function LiveDataSync() {
     };
 
     const interval = window.setInterval(sync, 10000);
-    const refreshInterval = window.setInterval(refreshSession, 5 * 60 * 1000);
+    const refreshInterval = window.setInterval(refreshSession, 30 * 60 * 1000);
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
 

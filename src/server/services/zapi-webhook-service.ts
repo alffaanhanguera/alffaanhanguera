@@ -243,4 +243,23 @@ export class ZapiWebhookService {
       automation: "chatbot-flow"
     };
   }
+
+  async handleOutboundStatus(input: {
+    messageId: string;
+    status: string;
+    occurredAt: Date;
+  }) {
+    const normalizedStatus = input.status.toUpperCase();
+
+    await this.conversations.updateOutboundMessageStatus({
+      externalMessageId: input.messageId,
+      status: normalizedStatus,
+      deliveredAt: normalizedStatus === "DELIVERED" ? input.occurredAt : undefined,
+      readAt: normalizedStatus === "READ" ? input.occurredAt : undefined
+    });
+
+    return {
+      success: true
+    };
+  }
 }

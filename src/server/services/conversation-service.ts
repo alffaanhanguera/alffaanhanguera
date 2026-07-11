@@ -1,4 +1,12 @@
 import { MessageDirection, Modality } from "@prisma/client";
+import {
+  extractPipelineStageId,
+  getStageLabel,
+  mergePipelineTag,
+  normalizeTags,
+  stripPipelineTags,
+  type LeadPipelineStageId
+} from "@/lib/crm";
 import { ZApiClient } from "@/server/zapi/zapi-client";
 import { ConversationRepository } from "@/server/repositories/conversation-repository";
 import { IntegrationLogRepository } from "@/server/repositories/integration-log-repository";
@@ -11,6 +19,30 @@ export class ConversationService {
     private readonly integrationLogs = new IntegrationLogRepository()
   ) {}
 
+  private mapLegacyLeadStatus(status: string | null | undefined): LeadPipelineStageId {
+    if (status === "ENROLLED") {
+      return "completed-enrollment";
+    }
+
+    if (status === "IN_NEGOTIATION") {
+      return "operator-service";
+    }
+
+    if (status === "READY_FOR_OPERATOR") {
+      return "waiting-operator";
+    }
+
+    if (status === "QUALIFYING") {
+      return "ai-service";
+    }
+
+    if (status === "LOST") {
+      return "closed";
+    }
+
+    return "new-lead";
+  }
+
   async listForInbox() {
     const items = await this.repository.list();
 
@@ -18,19 +50,23 @@ export class ConversationService {
       return [];
     }
 
-    return items.map((conversation) => ({
-      id: conversation.id,
-      name: conversation.lead.fullName,
-      avatar: "",
-      lastMessage: conversation.messages[0]?.content ?? "Sem mensagens ainda",
-      time: new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(
-        conversation.lastMessageAt ?? conversation.updatedAt
-      ),
-      unreadCount: conversation.unreadCount,
-      status: conversation.status,
-      operator: conversation.assignedOperator?.name ?? "Fila IA",
-      tags: conversation.tags
-    }));
+    return items.map((conversation) => {
+      const pipelineStageId = extractPipelineStageId(conversation.tags) ?? this.mapLegacyLeadStatus(conversation.lead.status);
+
+      return {
+        id: conversation.id,
+        name: conversation.lead.fullName,
+        avatar: "",
+        lastMessage: conversation.messages[0]?.content ?? "Sem mensagens ainda",
+        time: new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(
+          conversation.lastMessageAt ?? conversation.updatedAt
+        ),
+        unreadCount: conversation.unreadCount,
+        status: getStageLabel(pipelineStageId),
+        operator: conversation.assignedOperator?.name ?? "Fila IA",
+        tags: stripPipelineTags(conversation.tags)
+      };
+    });
   }
 
   async getConversationDetail(conversationId?: string): Promise<ConversationDetail | null> {
@@ -43,11 +79,13 @@ export class ConversationService {
       return null;
     }
 
+    const pipelineStageId = extractPipelineStageId(target.tags) ?? this.mapLegacyLeadStatus(target.lead.status);
+
     return {
       id: target.id,
       leadName: target.lead.fullName,
       phone: target.lead.phone,
-      status: target.status,
+      status: getStageLabel(pipelineStageId),
       aiEnabled: target.aiEnabled,
       aiSummary: target.aiSummary,
       operator: target.assignedOperator?.name ?? "Fila IA",
@@ -61,13 +99,43 @@ export class ConversationService {
               : "Nao definido",
       shift: target.lead.desiredShift ?? "Nao definido",
       benefitSummary: target.lead.benefitSummary ?? "Nenhum beneficio identificado",
-      messages: target.messages.map((message) => ({
-        id: message.id,
-        text: message.content,
-        inbound: message.direction === MessageDirection.INBOUND,
-        time: new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(message.createdAt),
-        type: message.type
-      }))
+      tags: stripPipelineTags(target.tags),
+      leadNotes: target.lead.notes ?? null,
+      pipelineStageId,
+      messages: target.messages.map((message) => {
+        const metadata =
+          typeof message.metadata === "object" && message.metadata ? (message.metadata as Record<string, unknown>) : undefined;
+        const deliveryStatus = typeof metadata?.deliveryStatus === "string" ? metadata.deliveryStatus : null;
+        const readAt = typeof metadata?.readAt === "string" ? metadata.readAt : null;
+
+        let deliveryLabel: string | null = null;
+
+        if (message.direction === MessageDirection.OUTBOUND) {
+          if (deliveryStatus === "READ") {
+            deliveryLabel = readAt
+              ? `Visualizada às ${new Intl.DateTimeFormat("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }).format(new Date(readAt))}`
+              : "Visualizada";
+          } else if (deliveryStatus === "DELIVERED") {
+            deliveryLabel = "Entregue";
+          } else {
+            deliveryLabel = "Enviada";
+          }
+        }
+
+        return {
+          id: message.id,
+          text: message.content,
+          inbound: message.direction === MessageDirection.INBOUND,
+          time: new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(message.createdAt),
+          type: message.type,
+          mediaName: message.mediaUrl,
+          deliveryStatus,
+          deliveryLabel
+        };
+      })
     };
   }
 
@@ -99,8 +167,10 @@ export class ConversationService {
     const storedMessage = await this.repository.createOutboundManualMessage({
       conversationId: conversation.id,
       content: params.content,
+      externalMessageId: "messageId" in delivery ? delivery.messageId : undefined,
       metadata: {
-        source: "operator-panel"
+        source: "operator-panel",
+        deliveryStatus: "SENT"
       }
     });
 
@@ -178,10 +248,12 @@ export class ConversationService {
       content: params.caption?.trim() || params.fileName,
       type: messageType,
       mediaUrl: params.fileName,
+      externalMessageId: "messageId" in delivery ? delivery.messageId : undefined,
       metadata: {
         source: "operator-panel",
         fileName: params.fileName,
-        mimeType: params.mimeType
+        mimeType: params.mimeType,
+        deliveryStatus: "SENT"
       }
     });
 
@@ -234,6 +306,64 @@ export class ConversationService {
     return {
       success: true,
       aiEnabled
+    };
+  }
+
+  async updateConversationMetadata(params: {
+    conversationId: string;
+    tags?: string[];
+    leadNotes?: string | null;
+    pipelineStageId?: string;
+  }) {
+    const conversation = await this.repository.getById(params.conversationId);
+
+    if (!conversation) {
+      throw new Error("Conversa nao encontrada.");
+    }
+
+    const nextTags = normalizeTags(params.tags ?? stripPipelineTags(conversation.tags));
+    const stageId = (params.pipelineStageId ?? extractPipelineStageId(conversation.tags) ?? this.mapLegacyLeadStatus(conversation.lead.status)) as LeadPipelineStageId;
+
+    await this.repository.updateConversation(conversation.id, {
+      tags: mergePipelineTag(nextTags, stageId)
+    });
+
+    if (params.leadNotes !== undefined) {
+      await this.repository.updateLead(conversation.leadId, {
+        notes: params.leadNotes || null
+      });
+    }
+
+    return this.getConversationDetail(conversation.id);
+  }
+
+  async updateLeadPipelineStage(leadId: string, pipelineStageId: LeadPipelineStageId) {
+    const conversation = (await this.repository.getByLeadId(leadId)) ?? (await this.repository.ensureConversationForLead(leadId));
+
+    if (!conversation) {
+      throw new Error("Conversa do lead nao encontrada.");
+    }
+
+    await this.repository.updateConversation(conversation.id, {
+      tags: mergePipelineTag(conversation.tags, pipelineStageId)
+    });
+
+    return {
+      success: true,
+      conversationId: conversation.id
+    };
+  }
+
+  async updateOutboundDeliveryStatus(params: {
+    externalMessageId: string;
+    status: string;
+    readAt?: Date | null;
+    deliveredAt?: Date | null;
+  }) {
+    await this.repository.updateOutboundMessageStatus(params);
+
+    return {
+      success: true
     };
   }
 }

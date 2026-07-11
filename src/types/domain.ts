@@ -29,6 +29,9 @@ export type ConversationMessageItem = {
   inbound: boolean;
   time: string;
   type: string;
+  mediaName?: string | null;
+  deliveryStatus?: string | null;
+  deliveryLabel?: string | null;
 };
 
 export type ConversationDetail = {
@@ -42,6 +45,9 @@ export type ConversationDetail = {
   modality: string;
   shift: string;
   benefitSummary: string;
+  tags: string[];
+  leadNotes: string | null;
+  pipelineStageId: string;
   messages: ConversationMessageItem[];
 };
 
@@ -59,4 +65,6 @@ export type LeadBoardItem = {
   companyName: string;
   status: string;
   benefitSummary: string;
+  tags: string[];
+  pipelineStageId: string;
 };

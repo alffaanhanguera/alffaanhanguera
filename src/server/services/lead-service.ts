@@ -1,96 +1,79 @@
 import { LeadStatus, Modality } from "@prisma/client";
+import {
+  extractPipelineStageId,
+  getStageLabel,
+  LEAD_PIPELINE_STAGES,
+  type LeadPipelineStageId
+} from "@/lib/crm";
 import { LeadRepository } from "@/server/repositories/lead-repository";
+import { ConversationService } from "@/server/services/conversation-service";
 import type { LeadBoardItem } from "@/types/domain";
-
-function formatLeadStatus(status: LeadStatus) {
-  if (status === LeadStatus.NEW) {
-    return "Novo";
-  }
-  if (status === LeadStatus.QUALIFYING) {
-    return "Qualificando";
-  }
-  if (status === LeadStatus.READY_FOR_OPERATOR) {
-    return "Pronto para operador";
-  }
-  if (status === LeadStatus.IN_NEGOTIATION) {
-    return "Negociacao";
-  }
-  if (status === LeadStatus.ENROLLED) {
-    return "Matriculado";
-  }
-  return "Perdido";
-}
 
 export class LeadService {
   constructor(private readonly repository = new LeadRepository()) {}
 
+  private mapLegacyStatusToStage(status: LeadStatus): LeadPipelineStageId {
+    if (status === LeadStatus.ENROLLED) {
+      return "completed-enrollment";
+    }
+    if (status === LeadStatus.IN_NEGOTIATION) {
+      return "operator-service";
+    }
+    if (status === LeadStatus.READY_FOR_OPERATOR) {
+      return "waiting-operator";
+    }
+    if (status === LeadStatus.QUALIFYING) {
+      return "ai-service";
+    }
+    if (status === LeadStatus.LOST) {
+      return "closed";
+    }
+    return "new-lead";
+  }
+
   async listForPanel() {
     const leads = await this.repository.list();
 
-    return leads.map((lead): LeadBoardItem => ({
-      id: lead.id,
-      name: lead.fullName,
-      phone: lead.phone,
-      course: lead.desiredCourse?.name ?? "Nao informado",
-      modality:
-        lead.desiredModality === Modality.EAD
-          ? "EAD 100% Online"
-          : lead.desiredModality === Modality.SEMIPRESENTIAL
-            ? "Semipresencial"
-            : lead.desiredModality === Modality.PRESENTIAL
-              ? "Presencial"
-              : "Nao definida",
-      city: lead.city ?? "Nao informada",
-      region: lead.region ?? "Nao informada",
-      cpf: lead.cpf ?? "",
-      email: lead.email ?? "",
-      birthDate: lead.birthDate ? new Intl.DateTimeFormat("pt-BR").format(lead.birthDate) : "",
-      companyName: lead.companyName ?? "",
-      status: formatLeadStatus(lead.status ?? LeadStatus.NEW),
-      benefitSummary: lead.benefitSummary ?? "Nenhum beneficio"
-    }));
+    return leads.map((lead): LeadBoardItem => {
+      const pipelineStageId = extractPipelineStageId(lead.conversations[0]?.tags) ?? this.mapLegacyStatusToStage(lead.status ?? LeadStatus.NEW);
+
+      return {
+        id: lead.id,
+        name: lead.fullName,
+        phone: lead.phone,
+        course: lead.desiredCourse?.name ?? "Nao informado",
+        modality:
+          lead.desiredModality === Modality.EAD
+            ? "EAD 100% Online"
+            : lead.desiredModality === Modality.SEMIPRESENTIAL
+              ? "Semipresencial"
+              : lead.desiredModality === Modality.PRESENTIAL
+                ? "Presencial"
+                : "Nao definida",
+        city: lead.city ?? "Nao informada",
+        region: lead.region ?? "Nao informada",
+        cpf: lead.cpf ?? "",
+        email: lead.email ?? "",
+        birthDate: lead.birthDate ? new Intl.DateTimeFormat("pt-BR").format(lead.birthDate) : "",
+        companyName: lead.companyName ?? "",
+        status: getStageLabel(pipelineStageId),
+        benefitSummary: lead.benefitSummary ?? "Nenhum beneficio",
+        tags: lead.conversations[0]?.tags ?? [],
+        pipelineStageId
+      };
+    });
   }
 
   async getKanbanData() {
     const leads = await this.listForPanel();
 
-    const groups = {
-      new: leads.filter((lead) => lead.status === "Novo"),
-      qualifying: leads.filter((lead) => lead.status === "Qualificando"),
-      ready: leads.filter((lead) => lead.status === "Pronto para operador"),
-      negotiation: leads.filter((lead) => lead.status === "Negociacao" || lead.status === "Matriculado")
-    };
-
-    return [
-      {
-        id: "new",
-        title: "Entrada",
-        description: "Leads recem captados pelo WhatsApp.",
-        accent: "bg-sky-500",
-        leads: groups.new
-      },
-      {
-        id: "qualifying",
-        title: "Qualificacao IA",
-        description: "Fluxo inicial e coleta de dados permitidos.",
-        accent: "bg-amber-500",
-        leads: groups.qualifying
-      },
-      {
-        id: "ready",
-        title: "Pronto para humano",
-        description: "Lead completo aguardando operador.",
-        accent: "bg-emerald-500",
-        leads: groups.ready
-      },
-      {
-        id: "negotiation",
-        title: "Fechamento",
-        description: "Negociacao e cursos vendidos.",
-        accent: "bg-violet-500",
-        leads: groups.negotiation
-      }
-    ];
+    return LEAD_PIPELINE_STAGES.map((stage) => ({
+      id: stage.id,
+      title: stage.label,
+      description: stage.description,
+      accent: stage.accent,
+      leads: leads.filter((lead) => lead.pipelineStageId === stage.id)
+    }));
   }
 
   async updateLead(input: {
@@ -115,15 +98,20 @@ export class LeadService {
     }
 
     const nextStatus =
-      input.status === "Qualificando"
+      input.status === "Atendimento IA"
         ? LeadStatus.QUALIFYING
-        : input.status === "Pronto para operador"
+        : input.status === "Aguardando Operador"
           ? LeadStatus.READY_FOR_OPERATOR
-          : input.status === "Negociacao"
+          : input.status === "Em Atendimento pelo Operador" ||
+              input.status === "Retornos Agendados" ||
+              input.status === "Aguardando Cliente" ||
+              input.status === "Operador sem Responder"
             ? LeadStatus.IN_NEGOTIATION
-            : input.status === "Matriculado"
+            : input.status === "Matrículas Concluídas"
               ? LeadStatus.ENROLLED
-              : LeadStatus.NEW;
+              : input.status === "Encerrados"
+                ? LeadStatus.LOST
+                : LeadStatus.NEW;
 
     const nextModality =
       input.modality === "EAD 100% Online" || input.modality === "EAD"
@@ -163,18 +151,31 @@ export class LeadService {
   }
 
   async updateLeadStatus(id: string, columnId: string) {
+    const pipelineStageId = LEAD_PIPELINE_STAGES.some((stage) => stage.id === columnId)
+      ? (columnId as LeadPipelineStageId)
+      : "new-lead";
+
     const status =
-      columnId === "qualifying"
-        ? LeadStatus.QUALIFYING
-        : columnId === "ready"
-          ? LeadStatus.READY_FOR_OPERATOR
-          : columnId === "negotiation"
+      pipelineStageId === "completed-enrollment"
+        ? LeadStatus.ENROLLED
+        : pipelineStageId === "closed"
+          ? LeadStatus.LOST
+          : pipelineStageId === "operator-service" ||
+              pipelineStageId === "scheduled-followup" ||
+              pipelineStageId === "waiting-customer" ||
+              pipelineStageId === "operator-sla"
             ? LeadStatus.IN_NEGOTIATION
-            : LeadStatus.NEW;
+            : pipelineStageId === "waiting-operator"
+              ? LeadStatus.READY_FOR_OPERATOR
+              : pipelineStageId === "ai-service"
+                ? LeadStatus.QUALIFYING
+                : LeadStatus.NEW;
 
     await this.repository.update(id, {
       status
     });
+
+    await new ConversationService().updateLeadPipelineStage(id, pipelineStageId);
 
     return this.getKanbanData();
   }
